@@ -327,6 +327,7 @@ Response:
 Notes:
 - `plannedRemovals.exact` is pre-selected by the algorithm — these are unambiguous. The UI shows them as checked/included by default but the user can still uncheck individual ones before executing.
 - `plannedRemovals.possibleDuplicates` items are **never** pre-selected. The execute request must carry the user's explicit choices (§5.9).
+- Within each `possibleDuplicates` group, `items[0]` is the one that survives on execute (the rest are deleted) — same "keep" preference as exact groups (§5.8 above): the item already residing in the merge target, if the group has one, otherwise the first-encountered item. This matters because it determines whether confirming a group keeps the user's existing target-playlist track or the newly-merged-in one.
 - If `target.mode === "create"`, `target.playlistId` is omitted here (doesn't exist yet); `plannedAdds` covers *all* items from *all* source playlists in that case (nothing to dedupe against yet, other than dedupe among the sources themselves).
 - `planToken` is a server-side cache key (in-memory `Map<planToken, PlanRecord>` with TTL, e.g. 5 minutes) capturing the exact plan **and** a snapshot hash of source/target playlist contents at preview time. It carries no data the client needs to trust — the client always sends back the *selections*, and the server re-derives the actual operations from its own cached `PlanRecord`, never from client-supplied item lists.
 

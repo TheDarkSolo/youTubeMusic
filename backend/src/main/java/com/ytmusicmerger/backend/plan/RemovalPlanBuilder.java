@@ -69,6 +69,13 @@ public class RemovalPlanBuilder {
         int counter = 1;
         for (DuplicateTrackDetector.PossibleGroup group : result.possible()) {
             List<PlaylistItemRecord> members = toRecords(group.items(), items);
+            // Callers (MergePlanService/DedupePlanService) keep items.get(0) and remove the
+            // rest, so the preferred item - typically the one already in the merge target -
+            // must be moved to the front here too, exactly as choosePreferred does for exact
+            // groups. Without this, "keep" was determined purely by scan order (source
+            // playlists before target), so confirming a possible-duplicate group could delete
+            // the user's pre-existing target track and keep the newly-imported one instead.
+            members = withPreferredFirst(members, preferredKeepPlaylistId);
             possiblePlans.add(new PossibleGroupPlan("pd-" + counter++, round(group.similarity()), members));
         }
 
@@ -84,6 +91,26 @@ public class RemovalPlanBuilder {
             }
         }
         return members.get(0); // first encountered, preserving input order (playlist position order)
+    }
+
+    private List<PlaylistItemRecord> withPreferredFirst(List<PlaylistItemRecord> members, String preferredPlaylistId) {
+        if (preferredPlaylistId == null) {
+            return members;
+        }
+        int idx = -1;
+        for (int i = 0; i < members.size(); i++) {
+            if (preferredPlaylistId.equals(members.get(i).playlistId())) {
+                idx = i;
+                break;
+            }
+        }
+        if (idx <= 0) {
+            return members; // no preferred item in this group, or already first
+        }
+        List<PlaylistItemRecord> reordered = new ArrayList<>(members);
+        PlaylistItemRecord preferred = reordered.remove(idx);
+        reordered.add(0, preferred);
+        return reordered;
     }
 
     private List<PlaylistItemRecord> toRecords(List<DuplicateTrackDetector.TrackInput> trackInputs,
