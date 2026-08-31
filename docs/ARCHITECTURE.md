@@ -338,9 +338,14 @@ Request:
 ```jsonc
 {
   "planToken": "6f2c1e8a-...-uuid",
-  "confirmedPossibleDuplicateGroupIds": ["pd-1"]
+  "confirmedPossibleDuplicateGroupIds": ["pd-1"],
   // ^ groupIds from plannedRemovals.possibleDuplicates that the user explicitly checked;
   //   any group not listed here is left untouched (both items kept).
+  "excludedExactVideoIds": ["dQw4w9WgXcQ"]
+  // ^ optional. videoIds from plannedRemovals.exact that the user unchecked (§5.8 note:
+  //   exact removals are pre-selected but the user can still opt a specific one out before
+  //   confirming). Omit or send [] to remove all exact duplicates as planned. Any videoId
+  //   here that isn't in the cached plan's plannedRemovals.exact is ignored.
 }
 ```
 
@@ -384,7 +389,9 @@ Response: same shape as `plannedRemovals` in §5.8, wrapped with a `planToken`:
 ```jsonc
 {
   "planToken": "9a1b...-uuid",
-  "confirmedPossibleDuplicateGroupIds": ["pd-2"]
+  "confirmedPossibleDuplicateGroupIds": ["pd-2"],
+  "excludedExactVideoIds": []
+  // ^ optional, same semantics as §5.9.
 }
 ```
 ```jsonc
