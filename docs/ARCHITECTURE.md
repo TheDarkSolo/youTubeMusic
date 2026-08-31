@@ -320,12 +320,14 @@ Response:
       }
     ]
   },
-  "summary": { "toAdd": 40, "exactDuplicatesToRemove": 1, "possibleDuplicateGroups": 1 }
+  "summary": { "toAdd": 40, "exactDuplicatesToRemove": 1, "possibleDuplicateGroups": 1 },
+  "estimatedQuota": { "committedUnits": 2050, "maxAdditionalUnits": 50 }
 }
 ```
 
 Notes:
 - `plannedRemovals.exact` is pre-selected by the algorithm — these are unambiguous. The UI shows them as checked/included by default but the user can still uncheck individual ones before executing.
+- `estimatedQuota` — YouTube Data API v3 quota cost estimate for this plan, computed from the published per-call costs (`playlistItems.insert`/`delete` = 50 units each, `playlists.insert` = 50 units, list calls = 1 unit and are ignored as negligible). `committedUnits` is the cost of what's already selected by default: `(plannedAdds.length + exactDuplicatesToRemove) * 50`, plus `50` more if `target.mode === "create"`. `maxAdditionalUnits` is the *extra* cost if the user confirms every `possibleDuplicates` group: `sum(group.items.length - 1) * 50`. This exists purely to inform the user before they spend quota (the default daily cap is 10,000 units, and a single large merge can consume most of it) — it does not gate or block execute in any way, and the frontend may recompute a live version of `committedUnits` locally as the user toggles exact-removal checkboxes, since it's a pure function of already-known counts.
 - `plannedRemovals.possibleDuplicates` items are **never** pre-selected. The execute request must carry the user's explicit choices (§5.9).
 - Within each `possibleDuplicates` group, `items[0]` is the one that survives on execute (the rest are deleted) — same "keep" preference as exact groups (§5.8 above): the item already residing in the merge target, if the group has one, otherwise the first-encountered item. This matters because it determines whether confirming a group keeps the user's existing target-playlist track or the newly-merged-in one.
 - If `target.mode === "create"`, `target.playlistId` is omitted here (doesn't exist yet); `plannedAdds` covers *all* items from *all* source playlists in that case (nothing to dedupe against yet, other than dedupe among the sources themselves).
@@ -381,9 +383,11 @@ Response: same shape as `plannedRemovals` in §5.8, wrapped with a `planToken`:
     "exact": [ /* same shape as §5.8 plannedRemovals.exact */ ],
     "possibleDuplicates": [ /* same shape as §5.8 plannedRemovals.possibleDuplicates */ ]
   },
-  "summary": { "exactDuplicatesToRemove": 3, "possibleDuplicateGroups": 2 }
+  "summary": { "exactDuplicatesToRemove": 3, "possibleDuplicateGroups": 2 },
+  "estimatedQuota": { "committedUnits": 150, "maxAdditionalUnits": 100 }
 }
 ```
+`estimatedQuota` follows the same shape and computation as §5.8's (no `plannedAdds`/`target` here, so `committedUnits = exactDuplicatesToRemove * 50`, `maxAdditionalUnits = sum(group.items.length - 1) * 50` over `possibleDuplicates`).
 
 ### 5.11 `POST /api/dedupe/execute`
 
