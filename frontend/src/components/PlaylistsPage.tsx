@@ -12,6 +12,7 @@ import type {
 import { useErrors } from "../context/ErrorContext";
 import { DedupeReview } from "./DedupeReview";
 import { DuplicateGroupCard } from "./DuplicateGroupCard";
+import { Logo } from "./Logo";
 import { MergeReview } from "./MergeReview";
 import { MergeSetup } from "./MergeSetup";
 import { Modal } from "./Modal";
@@ -113,7 +114,10 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
   return (
     <div className="page">
       <header className="page__header">
-        <h1>YT Music Manager</h1>
+        <div className="page__brand">
+          <Logo />
+          <h1>YT Music Manager</h1>
+        </div>
         <div className="page__header-actions">
           {channelTitle && <span className="muted">Signed in as {channelTitle}</span>}
           <button

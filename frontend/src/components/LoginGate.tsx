@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api, authLoginUrl } from "../api/client";
 import type { AuthStatus } from "../api/types";
 import { useErrors } from "../context/ErrorContext";
+import { Logo } from "./Logo";
 import { Spinner } from "./Spinner";
 
 interface Props {
@@ -54,6 +55,7 @@ export function LoginGate({ children }: Props) {
     return (
       <div className="center-page">
         <div className="login-card">
+          <Logo size={40} className="login-card__logo" />
           <h1>YT Music Manager</h1>
           <p>Connect your YouTube account to find and merge duplicate playlists.</p>
           <button
