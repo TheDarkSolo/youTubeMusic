@@ -1,5 +1,7 @@
 # YT Music Playlist Merger
 
+Web app to manage YouTube Music: join duplicate playlists and delete duplicate songs. Inspired by personal needs — TuneMyMusic imports from Spotify create duplicate playlists in YouTube Music.
+
 Веб-приложение для объединения дублирующихся плейлистов YouTube Music (например, после импорта из Spotify через TuneMyMusic) и удаления повторяющихся треков.
 
 ## Стек
