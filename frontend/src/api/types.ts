@@ -109,6 +109,14 @@ export interface PlannedRemovals {
   possibleDuplicates: PossibleDuplicateGroup[];
 }
 
+// §5.8/§5.10 — YouTube Data API v3 quota cost estimate for a preview's plan.
+// committedUnits: cost of what's already selected by default.
+// maxAdditionalUnits: extra cost if every possibleDuplicates group is confirmed.
+export interface EstimatedQuota {
+  committedUnits: number;
+  maxAdditionalUnits: number;
+}
+
 export interface MergePreviewResponse {
   planToken: string;
   expiresAt: string;
@@ -121,6 +129,7 @@ export interface MergePreviewResponse {
     exactDuplicatesToRemove: number;
     possibleDuplicateGroups: number;
   };
+  estimatedQuota: EstimatedQuota;
 }
 
 export interface MergeExecuteRequest {
@@ -152,6 +161,7 @@ export interface DedupePreviewResponse {
     exactDuplicatesToRemove: number;
     possibleDuplicateGroups: number;
   };
+  estimatedQuota: EstimatedQuota;
 }
 
 export interface DedupeExecuteRequest {

@@ -19,6 +19,9 @@ import java.util.stream.Collectors;
 public class DedupePlanService {
 
     private static final Duration PLAN_TTL = Duration.ofMinutes(5);
+    // §5.10 estimatedQuota: playlistItems.delete costs 50 units under YouTube Data API v3's
+    // published quota costs; list calls (1 unit) are ignored as negligible.
+    private static final long WRITE_OP_QUOTA_COST = 50L;
 
     private final PlaylistService playlistService;
     private final RemovalPlanBuilder removalPlanBuilder;
@@ -61,8 +64,14 @@ public class DedupePlanService {
         DedupePlanRecord record = new DedupePlanRecord(playlistId, removalPlan.exact(), possibleById, snapshotHash);
         PlanCache.PutResult put = planCache.put(record);
 
+        long committedUnits = (long) exactDuplicatesToRemove * WRITE_OP_QUOTA_COST;
+        long maxAdditionalUnits = removalPlan.possible().stream()
+                .mapToLong(g -> (long) (g.items().size() - 1) * WRITE_OP_QUOTA_COST)
+                .sum();
+        EstimatedQuotaDto estimatedQuota = new EstimatedQuotaDto(committedUnits, maxAdditionalUnits);
+
         return new DedupePreviewResponse(put.token(), put.expiresAt(), playlistId,
-                new DedupeRemovalsDto(exactDtos, possibleDtos), summary);
+                new DedupeRemovalsDto(exactDtos, possibleDtos), summary, estimatedQuota);
     }
 
     public DedupeExecuteResponse execute(DedupeExecuteRequest request) {

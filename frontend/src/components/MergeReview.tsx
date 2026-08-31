@@ -70,6 +70,14 @@ export function MergeReview({ preview, sourcePlaylistIds, target, onCancel, onCo
     return parts.join(", ") + ".";
   }, [sourceCount, livePreview.target.title, addCount, exactCheckedCount, possibleConfirmedCount]);
 
+  // Recomputed live from current checkbox state, per §5.8's note that this is a pure
+  // function of already-known counts — keeps the estimate accurate as selections change,
+  // rather than showing the static server value from the initial preview.
+  const liveCommittedUnits =
+    (addCount + exactCheckedCount) * 50 + (livePreview.target.mode === "create" ? 50 : 0);
+  const liveAdditionalUnits = possibleConfirmedCount * 50;
+  const quotaIsHigh = liveCommittedUnits > 7000;
+
   async function handleRePreview() {
     setRePreviewing(true);
     try {
@@ -198,6 +206,11 @@ export function MergeReview({ preview, sourcePlaylistIds, target, onCancel, onCo
       </section>
 
       <p className="summary-line">{summary}</p>
+      <p className={quotaIsHigh ? "hint hint--warn" : "hint"}>
+        Estimated YouTube API quota: ~{liveCommittedUnits} units
+        {liveAdditionalUnits > 0 ? ` (+ up to ${liveAdditionalUnits} more if all possible duplicates confirmed)` : ""}
+        {" "}— your daily limit is 10,000 units.
+      </p>
 
       <div className="modal__actions">
         <button className="btn btn--tertiary" onClick={onCancel} disabled={submitting}>

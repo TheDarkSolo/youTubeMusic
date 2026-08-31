@@ -35,6 +35,13 @@ export function DedupeReview({ preview, playlistTitle, onCancel, onCompleted }: 
     return parts.join(": ") + ".";
   }, [playlistTitle, exactCheckedCount, possibleConfirmedCount]);
 
+  // Recomputed live from current checkbox state, per §5.10's note that this is a pure
+  // function of already-known counts — keeps the estimate accurate as selections change,
+  // rather than showing the static server value from the initial preview.
+  const liveCommittedUnits = exactCheckedCount * 50;
+  const liveAdditionalUnits = possibleConfirmedCount * 50;
+  const quotaIsHigh = liveCommittedUnits > 7000;
+
   function toggleExact(videoId: string) {
     setUncheckedExact((prev) => {
       const next = new Set(prev);
@@ -157,6 +164,11 @@ export function DedupeReview({ preview, playlistTitle, onCancel, onCompleted }: 
       </section>
 
       <p className="summary-line">{summary}</p>
+      <p className={quotaIsHigh ? "hint hint--warn" : "hint"}>
+        Estimated YouTube API quota: ~{liveCommittedUnits} units
+        {liveAdditionalUnits > 0 ? ` (+ up to ${liveAdditionalUnits} more if all possible duplicates confirmed)` : ""}
+        {" "}— your daily limit is 10,000 units.
+      </p>
 
       <div className="modal__actions">
         <button className="btn btn--tertiary" onClick={onCancel} disabled={submitting}>

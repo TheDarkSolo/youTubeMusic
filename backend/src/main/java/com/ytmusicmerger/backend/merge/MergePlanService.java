@@ -21,6 +21,10 @@ import java.util.stream.Collectors;
 public class MergePlanService {
 
     private static final Duration PLAN_TTL = Duration.ofMinutes(5);
+    // §5.8 estimatedQuota: playlistItems.insert/delete and playlists.insert each cost 50
+    // units under YouTube Data API v3's published quota costs; list calls (1 unit) are
+    // ignored as negligible.
+    private static final long WRITE_OP_QUOTA_COST = 50L;
 
     private final PlaylistService playlistService;
     private final RemovalPlanBuilder removalPlanBuilder;
@@ -133,8 +137,17 @@ public class MergePlanService {
         MergeTargetResponseDto targetDto = new MergeTargetResponseDto(resolvedTarget.mode(), resolvedTarget.playlistId(),
                 resolvedTarget.title());
 
+        long committedUnits = ((long) plannedAddDtos.size() + exactDuplicatesToRemove) * WRITE_OP_QUOTA_COST;
+        if (resolvedTarget.isCreate()) {
+            committedUnits += WRITE_OP_QUOTA_COST; // playlists.insert
+        }
+        long maxAdditionalUnits = removalPlan.possible().stream()
+                .mapToLong(g -> (long) (g.items().size() - 1) * WRITE_OP_QUOTA_COST)
+                .sum();
+        EstimatedQuotaDto estimatedQuota = new EstimatedQuotaDto(committedUnits, maxAdditionalUnits);
+
         return new MergePreviewResponse(put.token(), put.expiresAt(), targetDto, sourcePlaylistDtos, plannedAddDtos,
-                new PlannedRemovalsDto(exactDtos, possibleDtos), summary);
+                new PlannedRemovalsDto(exactDtos, possibleDtos), summary, estimatedQuota);
     }
 
     public MergeExecuteResponse execute(MergeExecuteRequest request) {
