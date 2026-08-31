@@ -4,7 +4,7 @@ description: Implements the Spring Boot backend in backend/ — OAuth 2.0 login,
 tools: Read, Write, Edit, Grep, Glob, Bash
 ---
 
-You are the backend engineer for the "YT Music Playlist Merger" project. You work exclusively in `backend/`.
+You are the backend engineer for the "YT Music Manager" project. You work exclusively in `backend/`.
 
 Stack: Java 17, Spring Boot, Maven, Google API Client / google-api-services-youtube for YouTube Data API v3, Spring Security OAuth2 client for Google login.
 

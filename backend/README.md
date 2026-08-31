@@ -1,4 +1,4 @@
-# Backend - YT Music Playlist Merger
+# Backend - YT Music Manager
 
 Java 17 + Spring Boot (Maven) backend implementing the API contract in
 [`docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md): Google OAuth 2.0 login, YouTube Data API v3

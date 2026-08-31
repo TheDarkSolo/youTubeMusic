@@ -15,7 +15,7 @@
     <artifactId>backend</artifactId>
     <version>0.1.0</version>
     <name>backend</name>
-    <description>YT Music Playlist Merger - Spring Boot backend</description>
+    <description>YT Music Manager - Spring Boot backend</description>
 
     <properties>
         <java.version>17</java.version>

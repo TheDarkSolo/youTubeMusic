@@ -1,4 +1,4 @@
-# YT Music Playlist Merger — Architecture & API Contract
+# YT Music Manager — Architecture & API Contract
 
 Status: authoritative contract for backend (`java-backend` agent) and frontend (`react-frontend` agent). Both must build against this document; any change here must be called out explicitly since the two sides are implemented independently.
 
