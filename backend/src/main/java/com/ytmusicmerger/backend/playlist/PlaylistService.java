@@ -1,11 +1,14 @@
 package com.ytmusicmerger.backend.playlist;
 
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.services.youtube.YouTube;
 import com.google.api.services.youtube.model.*;
 import com.ytmusicmerger.backend.auth.AuthService;
 import com.ytmusicmerger.backend.auth.GoogleTokenHolder;
 import com.ytmusicmerger.backend.detect.DuplicatePlaylistDetector;
 import com.ytmusicmerger.backend.error.ApiException;
+import com.ytmusicmerger.backend.error.ErrorCode;
+import com.ytmusicmerger.backend.error.GoogleApiErrorTranslator;
 import com.ytmusicmerger.backend.youtube.ThumbnailUtil;
 import com.ytmusicmerger.backend.youtube.YouTubeClientFactory;
 import org.springframework.stereotype.Service;
@@ -96,8 +99,10 @@ public class PlaylistService {
             }
             return new TracksResponse(playlistId, items, response.getNextPageToken());
         } catch (IOException e) {
-            throw new ApiException(com.ytmusicmerger.backend.error.ErrorCode.INTERNAL_ERROR,
-                    "Failed to fetch playlist tracks from YouTube.");
+            if (e instanceof GoogleJsonResponseException gje) {
+                throw GoogleApiErrorTranslator.translate(gje);
+            }
+            throw new ApiException(ErrorCode.INTERNAL_ERROR, "Failed to fetch playlist tracks from YouTube.");
         }
     }
 
@@ -127,7 +132,10 @@ public class PlaylistService {
                 pageToken = response.getNextPageToken();
             } while (pageToken != null);
         } catch (IOException e) {
-            throw new ApiException(com.ytmusicmerger.backend.error.ErrorCode.INTERNAL_ERROR,
+            if (e instanceof GoogleJsonResponseException gje) {
+                throw GoogleApiErrorTranslator.translate(gje);
+            }
+            throw new ApiException(ErrorCode.INTERNAL_ERROR,
                     "Failed to fetch playlist tracks from YouTube (playlist " + playlistId + ").");
         }
         return all;
@@ -159,8 +167,10 @@ public class PlaylistService {
                 }
             }
         } catch (IOException e) {
-            throw new ApiException(com.ytmusicmerger.backend.error.ErrorCode.INTERNAL_ERROR,
-                    "Failed to fetch playlist metadata from YouTube.");
+            if (e instanceof GoogleJsonResponseException gje) {
+                throw GoogleApiErrorTranslator.translate(gje);
+            }
+            throw new ApiException(ErrorCode.INTERNAL_ERROR, "Failed to fetch playlist metadata from YouTube.");
         }
         return result;
     }
@@ -172,8 +182,10 @@ public class PlaylistService {
             Playlist created = client().playlists().insert(List.of("snippet"), body).execute();
             return new PlaylistMeta(created.getId(), title, 0L);
         } catch (IOException e) {
-            throw new ApiException(com.ytmusicmerger.backend.error.ErrorCode.INTERNAL_ERROR,
-                    "Failed to create the target playlist on YouTube.");
+            if (e instanceof GoogleJsonResponseException gje) {
+                throw GoogleApiErrorTranslator.translate(gje);
+            }
+            throw new ApiException(ErrorCode.INTERNAL_ERROR, "Failed to create the target playlist on YouTube.");
         }
     }
 
@@ -210,8 +222,10 @@ public class PlaylistService {
                 pageToken = response.getNextPageToken();
             } while (pageToken != null);
         } catch (IOException e) {
-            throw new ApiException(com.ytmusicmerger.backend.error.ErrorCode.INTERNAL_ERROR,
-                    "Failed to fetch playlists from YouTube.");
+            if (e instanceof GoogleJsonResponseException gje) {
+                throw GoogleApiErrorTranslator.translate(gje);
+            }
+            throw new ApiException(ErrorCode.INTERNAL_ERROR, "Failed to fetch playlists from YouTube.");
         }
         return all;
     }

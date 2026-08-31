@@ -30,34 +30,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(GoogleJsonResponseException.class)
     public ResponseEntity<ErrorResponse> handleGoogleJsonResponseException(GoogleJsonResponseException ex) {
-        ErrorCode code;
-        String message;
-        String reason = extractReason(ex);
-        int status = ex.getStatusCode();
-
-        if (status == 401) {
-            code = ErrorCode.UNAUTHENTICATED;
-            message = "No active YouTube session. Please log in again.";
-        } else if (status == 403 && reason != null && reason.toLowerCase().contains("quota")) {
-            code = ErrorCode.QUOTA_EXCEEDED;
-            message = "YouTube API daily quota exceeded. Try again after quota reset (midnight Pacific time).";
-        } else if (status == 429) {
-            code = ErrorCode.QUOTA_EXCEEDED;
-            message = "YouTube API daily quota exceeded. Try again after quota reset (midnight Pacific time).";
-        } else if (status == 403) {
-            code = ErrorCode.FORBIDDEN;
-            message = "You do not have permission to modify this playlist.";
-        } else if (status == 404) {
-            code = ErrorCode.NOT_FOUND;
-            message = "The requested YouTube resource was not found.";
-        } else {
-            code = ErrorCode.INTERNAL_ERROR;
-            message = "YouTube API request failed unexpectedly.";
-            log.error("Unhandled GoogleJsonResponseException (status={}, reason={}): {}", status, reason,
-                    ex.getMessage(), ex);
-        }
-        return ResponseEntity.status(code.httpStatus())
-                .body(ErrorResponse.of(code, message, code.defaultRetryable()));
+        ApiException translated = GoogleApiErrorTranslator.translate(ex);
+        return ResponseEntity.status(translated.code().httpStatus())
+                .body(ErrorResponse.of(translated.code(), translated.getMessage(), translated.retryable()));
     }
 
     @ExceptionHandler({MethodArgumentNotValidException.class, IllegalArgumentException.class})
@@ -71,17 +46,5 @@ public class GlobalExceptionHandler {
         log.error("Unhandled exception", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ErrorResponse.of(ErrorCode.INTERNAL_ERROR, "An unexpected error occurred.", true));
-    }
-
-    private String extractReason(GoogleJsonResponseException ex) {
-        try {
-            if (ex.getDetails() != null && ex.getDetails().getErrors() != null
-                    && !ex.getDetails().getErrors().isEmpty()) {
-                return ex.getDetails().getErrors().get(0).getReason();
-            }
-        } catch (Exception ignored) {
-            // fall through
-        }
-        return null;
     }
 }
