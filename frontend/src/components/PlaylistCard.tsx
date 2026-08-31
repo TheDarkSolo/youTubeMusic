@@ -6,11 +6,33 @@ interface Props {
   onDedupeClick: (playlist: Playlist) => void;
   dedupeLoading: boolean;
   dedupeDisabled: boolean;
+  /** When true, shows a checkbox for bulk-selecting playlists to merge instead of the normal actions. */
+  selectable?: boolean;
+  selected?: boolean;
+  onToggleSelect?: (playlist: Playlist) => void;
 }
 
-export function PlaylistCard({ playlist, onDedupeClick, dedupeLoading, dedupeDisabled }: Props) {
+export function PlaylistCard({
+  playlist,
+  onDedupeClick,
+  dedupeLoading,
+  dedupeDisabled,
+  selectable = false,
+  selected = false,
+  onToggleSelect,
+}: Props) {
   return (
-    <div className="playlist-card">
+    <div className={`playlist-card${selectable ? " playlist-card--selectable" : ""}`}>
+      {selectable && (
+        <label className="playlist-card__select">
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={() => onToggleSelect?.(playlist)}
+          />
+          Select
+        </label>
+      )}
       <img
         className="playlist-card__thumb"
         src={playlist.thumbnailUrl}

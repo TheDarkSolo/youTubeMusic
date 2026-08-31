@@ -54,7 +54,7 @@ export function LoginGate({ children }: Props) {
     return (
       <div className="center-page">
         <div className="login-card">
-          <h1>YT Music Playlist Merger</h1>
+          <h1>YT Music Manager</h1>
           <p>Connect your YouTube account to find and merge duplicate playlists.</p>
           <button
             className="btn btn--primary"

@@ -1,4 +1,4 @@
-# YT Music Playlist Merger — Frontend
+# YT Music Manager — Frontend
 
 React + Vite + TypeScript single-page app for the personal-use YouTube playlist
 merger. Implements the client side of the contract in

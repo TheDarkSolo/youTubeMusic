@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { api } from "../api/client";
-import type { DuplicateGroup, MergePreviewResponse, MergeTarget, Playlist } from "../api/types";
+import type { MergePreviewResponse, MergeTarget, Playlist } from "../api/types";
 import { useErrors } from "../context/ErrorContext";
 import { Spinner } from "./Spinner";
 
 interface Props {
-  group: DuplicateGroup;
+  initialPlaylistIds: string[];
   playlists: Playlist[];
   onCancel: () => void;
   onPreviewReady: (
@@ -16,11 +16,11 @@ interface Props {
 }
 
 /** Step 1 of the merge flow: pick which playlists to merge and the target, then preview. */
-export function MergeSetup({ group, playlists, onCancel, onPreviewReady }: Props) {
-  const members = playlists.filter((p) => group.playlistIds.includes(p.id));
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(group.playlistIds));
+export function MergeSetup({ initialPlaylistIds, playlists, onCancel, onPreviewReady }: Props) {
+  const members = playlists.filter((p) => initialPlaylistIds.includes(p.id));
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(initialPlaylistIds));
   const [targetMode, setTargetMode] = useState<"existing" | "create">("existing");
-  const [existingTargetId, setExistingTargetId] = useState<string>(group.playlistIds[0] ?? "");
+  const [existingTargetId, setExistingTargetId] = useState<string>(initialPlaylistIds[0] ?? "");
   const [newTitle, setNewTitle] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const { reportError, quotaCoolingDown } = useErrors();
@@ -63,7 +63,7 @@ export function MergeSetup({ group, playlists, onCancel, onPreviewReady }: Props
 
   return (
     <div className="merge-setup">
-      <p className="hint">Choose which playlists to merge (defaults to the whole group).</p>
+      <p className="hint">Choose which playlists to merge (defaults to all selected).</p>
       <ul className="checkbox-list">
         {members.map((p) => (
           <li key={p.id}>
@@ -87,7 +87,7 @@ export function MergeSetup({ group, playlists, onCancel, onPreviewReady }: Props
           checked={targetMode === "existing"}
           onChange={() => setTargetMode("existing")}
         />
-        An existing playlist from the group
+        An existing playlist from the selection
       </label>
       {targetMode === "existing" && (
         <select

@@ -3,7 +3,6 @@ import { api } from "../api/client";
 import type {
   DedupeExecuteResponse,
   DedupePreviewResponse,
-  DuplicateGroup,
   MergeExecuteResponse,
   MergePreviewResponse,
   MergeTarget,
@@ -20,7 +19,7 @@ import { PlaylistCard } from "./PlaylistCard";
 import { Spinner } from "./Spinner";
 
 type Overlay =
-  | { kind: "mergeSetup"; group: DuplicateGroup }
+  | { kind: "mergeSetup"; initialPlaylistIds: string[] }
   | { kind: "mergeReview"; preview: MergePreviewResponse; sourcePlaylistIds: string[]; target: MergeTarget }
   | { kind: "mergeDone"; result: MergeExecuteResponse }
   | { kind: "dedupeReview"; preview: DedupePreviewResponse; playlistTitle: string }
@@ -37,6 +36,8 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
   const [loading, setLoading] = useState(true);
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [dedupeLoadingId, setDedupeLoadingId] = useState<string | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const { reportError, quotaCoolingDown } = useErrors();
 
   const fetchPlaylists = useCallback(async () => {
@@ -77,17 +78,50 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
     }
   }
 
+  function toggleSelectMode() {
+    setSelectMode((prev) => !prev);
+    setSelectedIds(new Set());
+  }
+
+  function toggleSelectPlaylist(playlist: Playlist) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(playlist.id)) next.delete(playlist.id);
+      else next.add(playlist.id);
+      return next;
+    });
+  }
+
+  function exitSelectMode() {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  }
+
+  /** Cancel/close handler for any step of the merge flow: also resets select mode. */
+  function closeMergeFlow() {
+    setOverlay(null);
+    exitSelectMode();
+  }
+
   const playlists = data?.playlists ?? [];
   const groups = data?.duplicateGroups ?? [];
   const groupedIds = new Set(groups.flatMap((g) => g.playlistIds));
   const singles = playlists.filter((p) => !groupedIds.has(p.id));
+  const selectedCount = selectedIds.size;
+  const selectedPlaylists = playlists.filter((p) => selectedIds.has(p.id));
 
   return (
     <div className="page">
       <header className="page__header">
-        <h1>YT Music Playlist Merger</h1>
+        <h1>YT Music Manager</h1>
         <div className="page__header-actions">
           {channelTitle && <span className="muted">Signed in as {channelTitle}</span>}
+          <button
+            className={`btn btn--small ${selectMode ? "btn--primary" : "btn--secondary"}`}
+            onClick={toggleSelectMode}
+          >
+            {selectMode ? "Cancel selecting" : "Select playlists to merge"}
+          </button>
           <button className="btn btn--secondary btn--small" onClick={fetchPlaylists} disabled={loading}>
             Refresh
           </button>
@@ -109,10 +143,15 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
                   key={g.id}
                   group={g}
                   playlists={playlists}
-                  onMergeClick={(group) => setOverlay({ kind: "mergeSetup", group })}
+                  onMergeClick={(group) =>
+                    setOverlay({ kind: "mergeSetup", initialPlaylistIds: group.playlistIds })
+                  }
                   onDedupeClick={handleDedupeClick}
                   dedupeLoadingPlaylistId={dedupeLoadingId}
                   dedupeDisabled={quotaCoolingDown || dedupeLoadingId !== null}
+                  selectable={selectMode}
+                  selectedIds={selectedIds}
+                  onToggleSelect={toggleSelectPlaylist}
                 />
               ))}
             </section>
@@ -131,6 +170,9 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
                     onDedupeClick={handleDedupeClick}
                     dedupeLoading={dedupeLoadingId === p.id}
                     dedupeDisabled={quotaCoolingDown || dedupeLoadingId !== null}
+                    selectable={selectMode}
+                    selected={selectedIds.has(p.id)}
+                    onToggleSelect={toggleSelectPlaylist}
                   />
                 ))}
               </div>
@@ -139,12 +181,35 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
         </>
       )}
 
+      {selectMode && (
+        <div className="select-bar">
+          <span>
+            {selectedCount} selected
+            {selectedCount > 0 && (
+              <span className="muted">
+                {" "}
+                ({selectedPlaylists.map((p) => p.title).join(", ")})
+              </span>
+            )}
+          </span>
+          <button
+            className="btn btn--primary btn--small"
+            disabled={selectedCount < 2}
+            onClick={() =>
+              setOverlay({ kind: "mergeSetup", initialPlaylistIds: [...selectedIds] })
+            }
+          >
+            Merge selected
+          </button>
+        </div>
+      )}
+
       {overlay?.kind === "mergeSetup" && (
-        <Modal title={`Merge "${overlay.group.matchType === "exact" ? "exact" : "possible"}" duplicates`} onClose={() => setOverlay(null)}>
+        <Modal title="Merge playlists" onClose={closeMergeFlow}>
           <MergeSetup
-            group={overlay.group}
+            initialPlaylistIds={overlay.initialPlaylistIds}
             playlists={playlists}
-            onCancel={() => setOverlay(null)}
+            onCancel={closeMergeFlow}
             onPreviewReady={(preview, sourcePlaylistIds, target) =>
               setOverlay({ kind: "mergeReview", preview, sourcePlaylistIds, target })
             }
@@ -153,14 +218,15 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
       )}
 
       {overlay?.kind === "mergeReview" && (
-        <Modal title="Review merge" onClose={() => setOverlay(null)} wide>
+        <Modal title="Review merge" onClose={closeMergeFlow} wide>
           <MergeReview
             preview={overlay.preview}
             sourcePlaylistIds={overlay.sourcePlaylistIds}
             target={overlay.target}
-            onCancel={() => setOverlay(null)}
+            onCancel={closeMergeFlow}
             onCompleted={(result) => {
               setOverlay({ kind: "mergeDone", result });
+              exitSelectMode();
               fetchPlaylists();
             }}
           />

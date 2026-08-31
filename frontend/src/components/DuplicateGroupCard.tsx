@@ -8,6 +8,9 @@ interface Props {
   onDedupeClick: (playlist: Playlist) => void;
   dedupeLoadingPlaylistId: string | null;
   dedupeDisabled: boolean;
+  selectable?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (playlist: Playlist) => void;
 }
 
 /** A bordered cluster of playlists the backend flagged as likely duplicates of each other. */
@@ -18,7 +21,11 @@ export function DuplicateGroupCard({
   onDedupeClick,
   dedupeLoadingPlaylistId,
   dedupeDisabled,
+  selectable = false,
+  selectedIds,
+  onToggleSelect,
 }: Props) {
+  const members = playlists.filter((p) => group.playlistIds.includes(p.id));
   return (
     <div className="dup-group">
       <div className="dup-group__header">
@@ -31,13 +38,16 @@ export function DuplicateGroupCard({
         </button>
       </div>
       <div className="dup-group__members">
-        {playlists.map((p) => (
+        {members.map((p) => (
           <PlaylistCard
             key={p.id}
             playlist={p}
             onDedupeClick={onDedupeClick}
             dedupeLoading={dedupeLoadingPlaylistId === p.id}
             dedupeDisabled={dedupeDisabled}
+            selectable={selectable}
+            selected={selectedIds?.has(p.id) ?? false}
+            onToggleSelect={onToggleSelect}
           />
         ))}
       </div>
