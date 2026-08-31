@@ -1,0 +1,32 @@
+# Base configuration. Real values come from environment variables (§6 of docs/ARCHITECTURE.md)
+# or, for local development, from src/main/resources/application-local.yml (gitignored -
+# copy application-local.yml.example and fill it in, then run with
+# SPRING_PROFILES_ACTIVE=local).
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: lax
+        # Not Secure in local dev (plain HTTP on localhost) per §2. Mark Secure if ever
+        # deployed behind HTTPS - this is a personal-use, single-user, local-run tool.
+        secure: false
+
+spring:
+  application:
+    name: yt-music-playlist-merger-backend
+
+# §6 required backend env vars.
+google:
+  oauth:
+    client-id: ${GOOGLE_CLIENT_ID}
+    client-secret: ${GOOGLE_CLIENT_SECRET}
+    redirect-uri: ${GOOGLE_REDIRECT_URI}
+
+app:
+  frontend-base-url: ${FRONTEND_BASE_URL}
+
+logging:
+  level:
+    com.ytmusicmerger.backend: INFO

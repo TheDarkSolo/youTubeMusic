@@ -1,0 +1,33 @@
+# Local development overrides for the "local" Spring profile.
+#
+# 1. Copy this file to `application-local.yml` in this same directory (that filename is
+#    already gitignored at the repo root - see .gitignore - so your real credentials never
+#    get committed).
+# 2. Fill in the placeholders below with real values from Google Cloud Console:
+#      a. Go to https://console.cloud.google.com/ and create (or pick) a project.
+#      b. APIs & Services > Library > search "YouTube Data API v3" > Enable.
+#      c. APIs & Services > Credentials > Create Credentials > OAuth client ID.
+#         - Application type: "Web application".
+#         - Authorized redirect URIs: add exactly the value you put below for
+#           google.oauth.redirect-uri (e.g. http://localhost:8080/api/auth/callback).
+#         - You'll also be asked to configure an OAuth consent screen first if you haven't
+#           already (External is fine for personal use; add yourself as a test user while
+#           the app is unpublished).
+#      d. Copy the generated "Client ID" and "Client secret" into the values below.
+# 3. Run the backend with this profile active, e.g.:
+#      SPRING_PROFILES_ACTIVE=local mvn spring-boot:run
+#
+# Never commit the real `application-local.yml` - only this `.example` file (with
+# placeholders) belongs in git.
+
+server:
+  port: 8080
+
+google:
+  oauth:
+    client-id: "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
+    client-secret: "YOUR_GOOGLE_CLIENT_SECRET"
+    redirect-uri: "http://localhost:8080/api/auth/callback"
+
+app:
+  frontend-base-url: "http://localhost:5173"
