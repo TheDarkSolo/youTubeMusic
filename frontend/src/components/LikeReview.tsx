@@ -37,9 +37,9 @@ export function LikeReview({ preview, playlistTitle, onCancel, onCompleted }: Pr
   if (preview.toLike === 0) {
     return (
       <div className="like-review">
-        <p>
+        <p className="hint">
           All {preview.totalTracks} track{preview.totalTracks === 1 ? "" : "s"} in "{playlistTitle}" are
-          already in your Liked Music. Nothing to do.
+          already in your Liked Music — nothing to do.
         </p>
         <div className="modal__actions">
           <button className="btn btn--primary" onClick={onCancel}>
@@ -52,14 +52,20 @@ export function LikeReview({ preview, playlistTitle, onCancel, onCompleted }: Pr
 
   return (
     <div className="like-review">
-      <p>
-        {preview.toLike} of {preview.totalTracks} track{preview.totalTracks === 1 ? "" : "s"} in "
-        {playlistTitle}" {preview.toLike === 1 ? "is" : "are"} not yet liked
-        {preview.alreadyLiked > 0
-          ? ` (${preview.alreadyLiked} already liked and will be skipped)`
-          : ""}
-        .
-      </p>
+      <div className="like-review__stats">
+        <div className="like-review__stat">
+          <span className="like-review__stat-value">{preview.toLike}</span>
+          <span className="like-review__stat-label">To like</span>
+        </div>
+        <div className="like-review__stat like-review__stat--muted">
+          <span className="like-review__stat-value">{preview.alreadyLiked}</span>
+          <span className="like-review__stat-label">Already liked</span>
+        </div>
+        <div className="like-review__stat like-review__stat--muted">
+          <span className="like-review__stat-value">{preview.totalTracks}</span>
+          <span className="like-review__stat-label">Total tracks</span>
+        </div>
+      </div>
       <p className="summary-line">
         Like {preview.toLike} track{preview.toLike === 1 ? "" : "s"} from "{playlistTitle}" and add
         {preview.toLike === 1 ? " it" : " them"} to Liked Music.

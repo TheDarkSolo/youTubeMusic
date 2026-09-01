@@ -1,6 +1,18 @@
 import type { Playlist } from "../api/types";
 import { TrackList } from "./TrackList";
 
+/** Small heart glyph for the "Add to Liked Music" action — echoes the Logo's hand-authored SVG style. */
+function HeartIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
+      <path
+        d="M8 13.4C4.9 11.3 2.6 9.2 2.6 6.6c0-2 1.6-3.5 3.5-3.5 1.1 0 2.2.55 2.9 1.5.7-.95 1.8-1.5 2.9-1.5 1.9 0 3.5 1.5 3.5 3.5 0 2.6-2.3 4.7-5.4 6.8L8 13.4z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
 interface Props {
   playlist: Playlist;
   onDedupeClick: (playlist: Playlist) => void;
@@ -68,11 +80,12 @@ export function PlaylistCard({
           {dedupeLoading ? "Checking for duplicates…" : "Remove duplicate tracks"}
         </button>
         <button
-          className="btn btn--secondary btn--small"
+          className="btn btn--secondary btn--small btn--like"
           disabled={likeDisabled}
           onClick={() => onLikeClick(playlist)}
-          title="Like every track in this playlist so it shows up in your YouTube Music Liked Music — useful for a playlist imported from another service's Liked/Favorites list."
+          title="Like every track here so it appears in your YouTube Music Liked Music — handy for a playlist imported from another service (e.g. a Spotify Liked Songs export)."
         >
+          <HeartIcon />
           {likeLoading ? "Checking tracks…" : "Add to Liked Music"}
         </button>
         {onDeleteClick && (

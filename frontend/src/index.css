@@ -329,6 +329,21 @@ section {
   background: var(--danger-hover);
 }
 
+.btn--like {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn--like svg {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.btn--like:not(:disabled):hover svg {
+  color: var(--accent-hover);
+}
+
 .btn--link {
   background: none;
   border: none;
@@ -564,4 +579,46 @@ section {
 
 .stale-panel {
   text-align: center;
+}
+
+/* Like review stat breakdown */
+.like-review__stats {
+  display: flex;
+  gap: 10px;
+  margin: 4px 0 14px;
+}
+
+.like-review__stat {
+  flex: 1;
+  text-align: center;
+  padding: 10px 8px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+}
+
+.like-review__stat--muted {
+  background: var(--surface-alt);
+  border-color: var(--border);
+}
+
+.like-review__stat-value {
+  display: block;
+  font-size: 1.4em;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.like-review__stat--muted .like-review__stat-value {
+  font-size: 1.15em;
+  color: var(--text-muted);
+}
+
+.like-review__stat-label {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.72em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
