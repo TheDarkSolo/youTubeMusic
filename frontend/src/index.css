@@ -201,14 +201,18 @@ section {
    appears. */
 .tooltip-wrap {
   position: relative;
-  display: block;
+  display: flex;
+}
+
+.tooltip-wrap .btn {
+  width: 100%;
 }
 
 .tooltip-bubble {
   position: absolute;
   left: 50%;
-  bottom: calc(100% + 8px);
-  transform: translateX(-50%) translateY(4px);
+  top: calc(100% + 8px);
+  transform: translateX(-50%) translateY(-4px);
   width: max-content;
   max-width: 260px;
   padding: 8px 10px;
