@@ -13,16 +13,12 @@ function HeartIcon() {
   );
 }
 
-/**
- * Two overlapping triangles for "Remove duplicate tracks" — a miniature echo
- * of the app Logo's merge/dedupe motif, so the action reads as "this app's
- * dedupe action" rather than a generic icon.
- */
+/** Two overlapping squares — the standard "duplicate/copy" glyph — for "Remove duplicate tracks". */
 function DuplicateIcon() {
   return (
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
-      <polygon points="3,3 3,10.5 9.5,6.75" fill="currentColor" fillOpacity="0.45" />
-      <polygon points="6.5,5.5 6.5,13 13,9.25" fill="currentColor" />
+      <rect x="2.5" y="2.5" width="8" height="8" rx="1.5" fill="currentColor" fillOpacity="0.45" />
+      <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" fill="currentColor" />
     </svg>
   );
 }
