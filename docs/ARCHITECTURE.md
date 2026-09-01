@@ -428,6 +428,40 @@ Errors follow §5.7 (404 if the playlist doesn't exist or isn't owned by the use
 
 **Frontend gating**: the "Delete playlist" action is only surfaced for a playlist that is a member of a detected duplicate group (§3) *and* has strictly fewer tracks (`itemCount`) than the group's largest member — i.e. it's presented as cleanup for the "losing" side of a duplicate pair, not as a general-purpose delete-any-playlist button. Singleton playlists (no `duplicateGroupId`) never show this action.
 
+### 5.13 `GET /api/playlists/{playlistId}/like-preview`
+
+Motivation: a playlist imported from another service (e.g. a Spotify "Liked Songs" export via TuneMyMusic) lands in YouTube Music as an ordinary playlist, not merged into the account's native "Liked Music" auto-playlist. This lets the user bulk-like every track in a chosen playlist so it starts showing up in Liked Music, instead of liking each track by hand.
+
+Read-only, no side effects: fetches the playlist's current tracks and checks the caller's existing rating for each unique `videoId` (`videos.getRating`, batchable up to 50 ids per call, 1 unit each) to determine how many are **not yet liked** - that's the actual quota-costing work `like-all` would do, since `videos.rate` is a 50-unit write call and re-liking an already-liked video is wasted quota.
+
+```jsonc
+// 200 OK
+{
+  "playlistId": "PLxxxxxxxxxxxxxxxxxx",
+  "totalTracks": 793,
+  "alreadyLiked": 40,
+  "toLike": 753,
+  "estimatedQuota": { "committedUnits": 37650 }
+}
+```
+`estimatedQuota.committedUnits = toLike * 50`, same computation style as §5.8/§5.10.
+
+### 5.14 `POST /api/playlists/{playlistId}/like-all`
+
+Executes the like-all action. No plan-token/staleness machinery (unlike merge/dedupe): liking is idempotent and non-destructive - re-fetching the playlist's current tracks and rating status fresh at execute time (rather than trusting a cached preview snapshot) carries no hazard, since there's no "wrong item got deleted" failure mode here, only "liked slightly more or fewer tracks than the preview showed" if the playlist changed in between, which is harmless.
+
+For every currently-unliked unique `videoId` in the playlist: `videos.rate(id, rating="like")`.
+
+```jsonc
+// 200 OK
+{ "status": "completed", "liked": 753, "alreadyLiked": 40, "errors": [] }
+```
+`status` becomes `"partial"` if `errors` is non-empty, same convention as merge/dedupe execute responses.
+
+Errors follow §5.7. Both endpoints require the existing `https://www.googleapis.com/auth/youtube` OAuth scope (§2) - `videos.rate`/`videos.getRating` are covered by it, no re-consent needed.
+
+**Frontend**: unlike delete-playlist, "Add to Liked Music" is a general-purpose action available on *every* playlist card (duplicate-group members and singles alike) - it's not duplicate-cleanup-specific. Clicking it calls like-preview and shows a confirmation dialog with the track count and quota estimate (reusing the same warn-styling threshold as merge/dedupe's quota display) before the user confirms and `like-all` is called.
+
 **Known caveat**: YouTube's `contentDetails.itemCount` (used for both the number shown on playlist cards and the "fewer tracks" comparison above) can lag behind the playlist's actual contents — observed in practice as a playlist showing `itemCount: 1` in this app while YouTube Music's own UI shows 0 tracks for the same playlist. This is a caching quirk on YouTube's side, not something this app's read path gets wrong (the same `playlists.list.contentDetails.itemCount` field YouTube Music's own UI would also ultimately derive from, just resolved at different times). No fix is applied for this in v1; the existing "Show tracks" action (§5.6, a live `playlistItems.list` call) is the accurate real-time source of truth if the user wants to double-check before deleting.
 
 ---
