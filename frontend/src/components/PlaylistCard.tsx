@@ -67,36 +67,40 @@ export function PlaylistCard({
         height={90}
       />
       <div className="playlist-card__body">
-        <div className="playlist-card__title">{playlist.title}</div>
+        <div className="playlist-card__title" title={playlist.title}>
+          {playlist.title}
+        </div>
         <div className="playlist-card__count">
           {playlist.itemCount} track{playlist.itemCount === 1 ? "" : "s"}
         </div>
         <TrackList playlistId={playlist.id} />
-        <button
-          className="btn btn--secondary btn--small"
-          disabled={dedupeDisabled}
-          onClick={() => onDedupeClick(playlist)}
-        >
-          {dedupeLoading ? "Checking for duplicates…" : "Remove duplicate tracks"}
-        </button>
-        <button
-          className="btn btn--secondary btn--small btn--like"
-          disabled={likeDisabled}
-          onClick={() => onLikeClick(playlist)}
-          title="Like every track here so it appears in your YouTube Music Liked Music — handy for a playlist imported from another service (e.g. a Spotify Liked Songs export)."
-        >
-          <HeartIcon />
-          {likeLoading ? "Checking tracks…" : "Add to Liked Music"}
-        </button>
-        {onDeleteClick && (
+        <div className="playlist-card__actions">
           <button
-            className="btn btn--danger btn--small"
-            disabled={deleteDisabled}
-            onClick={() => onDeleteClick(playlist)}
+            className="btn btn--secondary btn--small"
+            disabled={dedupeDisabled}
+            onClick={() => onDedupeClick(playlist)}
           >
-            {deleteLoading ? "Deleting…" : "Delete playlist"}
+            {dedupeLoading ? "Checking for duplicates…" : "Remove duplicate tracks"}
           </button>
-        )}
+          <button
+            className="btn btn--secondary btn--small btn--like"
+            disabled={likeDisabled}
+            onClick={() => onLikeClick(playlist)}
+            title="Like every track here so it appears in your YouTube Music Liked Music — handy for a playlist imported from another service (e.g. a Spotify Liked Songs export)."
+          >
+            <HeartIcon />
+            {likeLoading ? "Checking tracks…" : "Add to Liked Music"}
+          </button>
+          {onDeleteClick && (
+            <button
+              className="btn btn--danger btn--small"
+              disabled={deleteDisabled}
+              onClick={() => onDeleteClick(playlist)}
+            >
+              {deleteLoading ? "Deleting…" : "Delete playlist"}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
