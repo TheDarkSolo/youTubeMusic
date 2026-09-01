@@ -366,6 +366,7 @@ Response:
 ```
 - Executing does **not** delete the emptied source playlists automatically. A separate, explicit follow-up action (out of scope for v1, or a future `deleteSourcePlaylists: true` flag on this same request — left as a possible extension, not built now) would be required, since `playlists.delete` is destructive and irreversible.
 - `errors` is a list of per-item failures (e.g. one `playlistItems.insert` call failed) so a partial success is still reported clearly rather than silently swallowed; overall `status` becomes `"partial"` if `errors` is non-empty.
+- See §5.15 for the quota-exhaustion stop rule, which applies to this endpoint's write loop.
 
 ### 5.10 `POST /api/dedupe/preview`
 
@@ -403,6 +404,7 @@ Response: same shape as `plannedRemovals` in §5.8, wrapped with a `planToken`:
 // 200 OK
 { "status": "completed", "playlistId": "PLxxxxxxxxxxxxxxxxxx", "removedExact": 3, "removedConfirmedPossible": 1, "errors": [] }
 ```
+See §5.15 for the quota-exhaustion stop rule, which applies to this endpoint's write loop.
 
 ### Plan token / staleness rules (applies to both execute endpoints)
 
@@ -456,13 +458,38 @@ For every currently-unliked unique `videoId` in the playlist: `videos.rate(id, r
 // 200 OK
 { "status": "completed", "liked": 753, "alreadyLiked": 40, "errors": [] }
 ```
-`status` becomes `"partial"` if `errors` is non-empty, same convention as merge/dedupe execute responses.
+`status` becomes `"partial"` if `errors` is non-empty, same convention as merge/dedupe execute responses. See §5.15 for the quota-exhaustion stop rule, which applies to this endpoint's write loop.
 
 Errors follow §5.7. Both endpoints require the existing `https://www.googleapis.com/auth/youtube` OAuth scope (§2) - `videos.rate`/`videos.getRating` are covered by it, no re-consent needed.
 
 **Frontend**: unlike delete-playlist, "Add to Liked Music" is a general-purpose action available on *every* playlist card (duplicate-group members and singles alike) - it's not duplicate-cleanup-specific. Clicking it calls like-preview and shows a confirmation dialog with the track count and quota estimate (reusing the same warn-styling threshold as merge/dedupe's quota display) before the user confirms and `like-all` is called.
 
 **Known caveat**: YouTube's `contentDetails.itemCount` (used for both the number shown on playlist cards and the "fewer tracks" comparison above) can lag behind the playlist's actual contents — observed in practice as a playlist showing `itemCount: 1` in this app while YouTube Music's own UI shows 0 tracks for the same playlist. This is a caching quirk on YouTube's side, not something this app's read path gets wrong (the same `playlists.list.contentDetails.itemCount` field YouTube Music's own UI would also ultimately derive from, just resolved at different times). No fix is applied for this in v1; the existing "Show tracks" action (§5.6, a live `playlistItems.list` call) is the accurate real-time source of truth if the user wants to double-check before deleting.
+
+### 5.15 Quota-exhaustion stop rule (applies to every execute endpoint)
+
+Applies to the write loops in `/api/merge/execute` (§5.9), `/api/dedupe/execute` (§5.11) and `/api/playlists/{id}/like-all` (§5.14).
+
+Each write call costs 50 quota units against a default cap of 10,000/day, so a large batch can exhaust the day's quota partway through. Observed in practice: a like-all over a 793-track playlist liked 174 tracks, then fired 609 further doomed calls that all failed identically.
+
+Rule: when a write call fails with a quota error (`GoogleJsonResponseException`, HTTP 403 with a quota-related reason, or HTTP 429 — the same detection `GoogleApiErrorTranslator` already performs for `QUOTA_EXCEEDED`), **stop the loop immediately** rather than attempting the remaining items. Continuing cannot succeed and only wastes wall-clock time and log noise.
+
+The response then reports:
+
+```jsonc
+{
+  "status": "quota_exhausted",
+  // ... plus that endpoint's usual counters, reflecting what actually completed
+  "remaining": 609,
+  "errors": []
+}
+```
+
+- `status` gains a third value alongside `"completed"`/`"partial"`: `"quota_exhausted"`.
+- `remaining` — how many items were left unattempted when the loop stopped. Present (and `0`) on non-quota outcomes too, so the field's shape is stable.
+- The item that hit the quota error is **not** added to `errors` — it's represented by the status and `remaining` count instead, so `errors` stays a list of genuine per-item problems (unavailable video, permission issue) rather than being flooded with one repeated infrastructure failure.
+
+**Resuming**: no server-side bookmark is needed. Every execute path re-derives what's left from live YouTube state on its next run — like-all re-checks `videos.getRating` and skips already-liked tracks; merge/dedupe re-run their preview, which won't re-plan adds/removals that already landed. So "resume tomorrow" is simply "run the same action again after the quota resets" (midnight Pacific time), and the frontend should say so rather than implying the progress was lost.
 
 ---
 
