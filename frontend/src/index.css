@@ -344,15 +344,30 @@ section {
   background: var(--danger-hover);
 }
 
-.btn--like {
+/* Action-button set on playlist cards (dedupe / like / delete): every button
+   carries a small leading icon, so lay them out identically — icon + label
+   centered together as one unit, same gap, same icon slot — regardless of
+   which icon or label length, so the stack reads as one designed set. */
+.playlist-card__actions .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
+}
+
+.playlist-card__actions .btn svg {
+  flex-shrink: 0;
+}
+
+/* Delete is destructive and sits apart from the two safe actions above it —
+   a little extra breathing room (on top of the group's flex gap) keeps that
+   reading as intentional rather than a layout accident. */
+.playlist-card__actions .btn--danger {
+  margin-top: 4px;
 }
 
 .btn--like svg {
   color: var(--accent);
-  flex-shrink: 0;
 }
 
 .btn--like:not(:disabled):hover svg {

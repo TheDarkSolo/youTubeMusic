@@ -13,6 +13,35 @@ function HeartIcon() {
   );
 }
 
+/**
+ * Two overlapping triangles for "Remove duplicate tracks" — a miniature echo
+ * of the app Logo's merge/dedupe motif, so the action reads as "this app's
+ * dedupe action" rather than a generic icon.
+ */
+function DuplicateIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
+      <polygon points="3,3 3,10.5 9.5,6.75" fill="currentColor" fillOpacity="0.45" />
+      <polygon points="6.5,5.5 6.5,13 13,9.25" fill="currentColor" />
+    </svg>
+  );
+}
+
+/** Simple filled trash glyph for "Delete playlist" — matches the flat, geometric style of the other action icons. */
+function TrashIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
+      <rect x="6" y="2.4" width="4" height="1.6" rx="0.8" fill="currentColor" />
+      <rect x="3" y="4.6" width="10" height="1.5" rx="0.75" fill="currentColor" />
+      <path
+        d="M4.3 6.7h7.4l-.66 6.86a1.1 1.1 0 0 1-1.1 1H6.06a1.1 1.1 0 0 1-1.1-1L4.3 6.7z"
+        fill="currentColor"
+        fillOpacity="0.9"
+      />
+    </svg>
+  );
+}
+
 interface Props {
   playlist: Playlist;
   onDedupeClick: (playlist: Playlist) => void;
@@ -80,6 +109,7 @@ export function PlaylistCard({
             disabled={dedupeDisabled}
             onClick={() => onDedupeClick(playlist)}
           >
+            <DuplicateIcon />
             {dedupeLoading ? "Checking for duplicates…" : "Remove duplicate tracks"}
           </button>
           <button
@@ -97,6 +127,7 @@ export function PlaylistCard({
               disabled={deleteDisabled}
               onClick={() => onDeleteClick(playlist)}
             >
+              <TrashIcon />
               {deleteLoading ? "Deleting…" : "Delete playlist"}
             </button>
           )}
