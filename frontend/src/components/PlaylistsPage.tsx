@@ -4,6 +4,7 @@ import type {
   DedupeExecuteResponse,
   DedupePreviewResponse,
   ExecuteError,
+  ExecuteStatus,
   LikeAllResponse,
   LikePreviewResponse,
   MergeExecuteResponse,
@@ -33,30 +34,76 @@ type Overlay =
   | { kind: "likeDone"; result: LikeAllResponse }
   | null;
 
+/** §5.15 — human wording for an execute outcome; raw status words are too technical. */
+function statusLabel(status: ExecuteStatus): string {
+  switch (status) {
+    case "quota_exhausted":
+      return "Stopped early — daily quota reached";
+    case "partial":
+      return "Finished with some failures";
+    default:
+      return "Completed";
+  }
+}
+
 /**
- * Per-item failures from a merge/dedupe/like execute. The backend already sends the
- * reason for each one, so show it rather than pointing at server logs the user has no
- * practical way to read - in practice these are almost always the daily YouTube API
- * quota running out partway through a large batch, which is worth saying plainly.
+ * §5.15 — the backend stops the write loop at the first quota error instead of firing
+ * further doomed calls, and reports how many items it never attempted. Nothing is lost:
+ * every execute path re-derives its remaining work from live YouTube state, so re-running
+ * the same action after the reset resumes rather than starting over. Say that plainly, so
+ * the user doesn't think the partial run has to be undone or repeated.
+ */
+function QuotaStopped({ remaining }: { remaining: number }) {
+  return (
+    <div className="hint hint--warn">
+      <p>
+        <strong>Your daily YouTube API quota (10,000 units) ran out.</strong>
+      </p>
+      <p>
+        This action stopped there, so {remaining} item{remaining === 1 ? " was" : "s were"} not
+        processed yet. Everything reported above did go through — that progress is saved and
+        does not need to be redone.
+      </p>
+      <p>
+        The quota resets at midnight Pacific time. Just run the same action again after that
+        and it will pick up where it left off, skipping what is already done.
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Genuine per-item failures (unavailable video, permission issue) - these can coexist with
+ * a quota stop. The backend sends the reason for each, so show it rather than pointing at
+ * server logs the user has no practical way to read.
  */
 function ExecuteErrors({ errors }: { errors: ExecuteError[] }) {
   if (errors.length === 0) return null;
-  const reason = errors[0]?.message ?? "";
-  const looksLikeQuota = /quota/i.test(reason);
   return (
     <div className="hint hint--warn">
       <p>
         {errors.length} track{errors.length === 1 ? "" : "s"} could not be processed.
       </p>
-      {looksLikeQuota ? (
-        <p>
-          Your daily YouTube API quota (10,000 units) ran out partway through. It resets at
-          midnight Pacific time — run this again then to finish the rest.
-        </p>
-      ) : (
-        <p>Reason: {reason}</p>
-      )}
+      <p>Reason: {errors[0]?.message ?? "unknown"}</p>
     </div>
+  );
+}
+
+/** Both halves of an execute outcome: the quota stop (if any) and any per-item failures. */
+function ExecuteOutcome({
+  status,
+  remaining,
+  errors,
+}: {
+  status: ExecuteStatus;
+  remaining: number;
+  errors: ExecuteError[];
+}) {
+  return (
+    <>
+      {status === "quota_exhausted" && <QuotaStopped remaining={remaining} />}
+      <ExecuteErrors errors={errors} />
+    </>
   );
 }
 
@@ -315,13 +362,20 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
       )}
 
       {overlay?.kind === "mergeDone" && (
-        <Modal title="Merge complete" onClose={() => setOverlay(null)}>
+        <Modal
+          title={overlay.result.status === "quota_exhausted" ? "Merge stopped early" : "Merge complete"}
+          onClose={() => setOverlay(null)}
+        >
           <p>
-            Status: <strong>{overlay.result.status}</strong>. Added {overlay.result.added} tracks,
+            <strong>{statusLabel(overlay.result.status)}.</strong> Added {overlay.result.added} tracks,
             removed {overlay.result.removedExact} exact and {overlay.result.removedConfirmedPossible}{" "}
             confirmed possible duplicates into "{overlay.result.target.title}".
           </p>
-          <ExecuteErrors errors={overlay.result.errors} />
+          <ExecuteOutcome
+            status={overlay.result.status}
+            remaining={overlay.result.remaining}
+            errors={overlay.result.errors}
+          />
           <div className="modal__actions">
             <button className="btn btn--primary" onClick={() => setOverlay(null)}>
               Done
@@ -345,12 +399,23 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
       )}
 
       {overlay?.kind === "dedupeDone" && (
-        <Modal title="Duplicates removed" onClose={() => setOverlay(null)}>
+        <Modal
+          title={
+            overlay.result.status === "quota_exhausted"
+              ? "Duplicate removal stopped early"
+              : "Duplicates removed"
+          }
+          onClose={() => setOverlay(null)}
+        >
           <p>
-            Removed {overlay.result.removedExact} exact and {overlay.result.removedConfirmedPossible}{" "}
-            confirmed possible duplicates.
+            <strong>{statusLabel(overlay.result.status)}.</strong> Removed {overlay.result.removedExact}{" "}
+            exact and {overlay.result.removedConfirmedPossible} confirmed possible duplicates.
           </p>
-          <ExecuteErrors errors={overlay.result.errors} />
+          <ExecuteOutcome
+            status={overlay.result.status}
+            remaining={overlay.result.remaining}
+            errors={overlay.result.errors}
+          />
           <div className="modal__actions">
             <button className="btn btn--primary" onClick={() => setOverlay(null)}>
               Done
@@ -371,12 +436,21 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
       )}
 
       {overlay?.kind === "likeDone" && (
-        <Modal title="Liked Music updated" onClose={() => setOverlay(null)}>
+        <Modal
+          title={
+            overlay.result.status === "quota_exhausted" ? "Liking stopped early" : "Liked Music updated"
+          }
+          onClose={() => setOverlay(null)}
+        >
           <p>
-            Status: <strong>{overlay.result.status}</strong>. Liked {overlay.result.liked} track
+            <strong>{statusLabel(overlay.result.status)}.</strong> Liked {overlay.result.liked} track
             {overlay.result.liked === 1 ? "" : "s"} ({overlay.result.alreadyLiked} were already liked).
           </p>
-          <ExecuteErrors errors={overlay.result.errors} />
+          <ExecuteOutcome
+            status={overlay.result.status}
+            remaining={overlay.result.remaining}
+            errors={overlay.result.errors}
+          />
           <div className="modal__actions">
             <button className="btn btn--primary" onClick={() => setOverlay(null)}>
               Done

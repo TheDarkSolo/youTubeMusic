@@ -486,7 +486,7 @@ The response then reports:
 ```
 
 - `status` gains a third value alongside `"completed"`/`"partial"`: `"quota_exhausted"`.
-- `remaining` — how many items were left unattempted when the loop stopped. Present (and `0`) on non-quota outcomes too, so the field's shape is stable.
+- `remaining` — how many items still need doing when the loop stopped, i.e. everything not yet attempted **plus** the one item whose call hit the quota error (it was attempted but never landed, so from the user's point of view it is still outstanding). Present (and `0`) on non-quota outcomes too, so the field's shape is stable.
 - The item that hit the quota error is **not** added to `errors` — it's represented by the status and `remaining` count instead, so `errors` stays a list of genuine per-item problems (unavailable video, permission issue) rather than being flooded with one repeated infrastructure failure.
 
 **Resuming**: no server-side bookmark is needed. Every execute path re-derives what's left from live YouTube state on its next run — like-all re-checks `videos.getRating` and skips already-liked tracks; merge/dedupe re-run their preview, which won't re-plan adds/removals that already landed. So "resume tomorrow" is simply "run the same action again after the quota resets" (midnight Pacific time), and the frontend should say so rather than implying the progress was lost.

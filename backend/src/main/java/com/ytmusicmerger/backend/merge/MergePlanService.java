@@ -1,10 +1,13 @@
 package com.ytmusicmerger.backend.merge;
 
 import com.ytmusicmerger.backend.error.ApiException;
+import com.ytmusicmerger.backend.error.GoogleApiErrorTranslator;
 import com.ytmusicmerger.backend.plan.*;
 import com.ytmusicmerger.backend.playlist.PlaylistItemRecord;
 import com.ytmusicmerger.backend.playlist.PlaylistMeta;
 import com.ytmusicmerger.backend.playlist.PlaylistService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -19,6 +22,8 @@ import java.util.stream.Collectors;
  */
 @Service
 public class MergePlanService {
+
+    private static final Logger log = LoggerFactory.getLogger(MergePlanService.class);
 
     private static final Duration PLAN_TTL = Duration.ofMinutes(5);
     // §5.8 estimatedQuota: playlistItems.insert/delete and playlists.insert each cost 50
@@ -183,54 +188,115 @@ public class MergePlanService {
         }
 
         List<ExecuteErrorDto> errors = new ArrayList<>();
-        int added = 0;
-        for (MergePlanRecord.PlannedAddInternal add : record.plannedAdds()) {
-            try {
-                playlistService.insertPlaylistItem(targetPlaylistId, add.videoId());
-                added++;
-            } catch (Exception e) {
-                errors.add(new ExecuteErrorDto("Failed to add video: " + e.getMessage(), add.videoId(), targetPlaylistId));
-            }
-        }
+        // §5.15: `remaining` spans all three write loops, so count every operation this
+        // execute intends to perform up front and subtract the ones we actually attempt.
+        int totalPlanned = record.plannedAdds().size()
+                + countPlannedExactRemovals(record, excludedExactVideoIds)
+                + countPlannedPossibleRemovals(record, confirmedPossibleGroupIds);
+        int attempted = 0;
+        boolean quotaExhausted = false;
 
+        int added = 0;
         int removedExact = 0;
-        for (RemovalPlanBuilder.ExactGroupPlan group : record.exactGroups()) {
-            if (excludedExactVideoIds.contains(group.videoId())) {
-                continue; // user unchecked this exact-duplicate group - keep all copies
-            }
-            for (PlaylistItemRecord toRemove : group.remove()) {
+        int removedConfirmedPossible = 0;
+
+        writes:
+        {
+            for (MergePlanRecord.PlannedAddInternal add : record.plannedAdds()) {
+                attempted++;
                 try {
-                    playlistService.deletePlaylistItem(toRemove.playlistItemId());
-                    removedExact++;
+                    playlistService.insertPlaylistItem(targetPlaylistId, add.videoId());
+                    added++;
                 } catch (Exception e) {
-                    errors.add(new ExecuteErrorDto("Failed to remove duplicate: " + e.getMessage(),
-                            group.videoId(), toRemove.playlistId()));
+                    // §5.15: a quota failure stops all remaining work (in this loop and the
+                    // ones below) and is reported via status + `remaining`, not in `errors`.
+                    if (GoogleApiErrorTranslator.isQuotaExhausted(e)) {
+                        // This item was attempted but never landed, so it still counts as left to do.
+                        attempted--;
+                        quotaExhausted = true;
+                        break writes;
+                    }
+                    errors.add(new ExecuteErrorDto("Failed to add video: " + e.getMessage(), add.videoId(), targetPlaylistId));
+                }
+            }
+
+            for (RemovalPlanBuilder.ExactGroupPlan group : record.exactGroups()) {
+                if (excludedExactVideoIds.contains(group.videoId())) {
+                    continue; // user unchecked this exact-duplicate group - keep all copies
+                }
+                for (PlaylistItemRecord toRemove : group.remove()) {
+                    attempted++;
+                    try {
+                        playlistService.deletePlaylistItem(toRemove.playlistItemId());
+                        removedExact++;
+                    } catch (Exception e) {
+                        if (GoogleApiErrorTranslator.isQuotaExhausted(e)) {
+                            // This item was attempted but never landed, so it still counts as left to do.
+                            attempted--;
+                            quotaExhausted = true;
+                            break writes;
+                        }
+                        errors.add(new ExecuteErrorDto("Failed to remove duplicate: " + e.getMessage(),
+                                group.videoId(), toRemove.playlistId()));
+                    }
+                }
+            }
+
+            for (String groupId : confirmedPossibleGroupIds) {
+                RemovalPlanBuilder.PossibleGroupPlan group = record.possibleGroupsById().get(groupId);
+                if (group == null || group.items().size() < 2) {
+                    continue; // unknown/stale groupId - ignore rather than error
+                }
+                List<PlaylistItemRecord> items = group.items();
+                // Keep the first item, remove the rest.
+                for (int i = 1; i < items.size(); i++) {
+                    PlaylistItemRecord toRemove = items.get(i);
+                    attempted++;
+                    try {
+                        playlistService.deletePlaylistItem(toRemove.playlistItemId());
+                        removedConfirmedPossible++;
+                    } catch (Exception e) {
+                        if (GoogleApiErrorTranslator.isQuotaExhausted(e)) {
+                            // This item was attempted but never landed, so it still counts as left to do.
+                            attempted--;
+                            quotaExhausted = true;
+                            break writes;
+                        }
+                        errors.add(new ExecuteErrorDto("Failed to remove possible duplicate: " + e.getMessage(),
+                                toRemove.videoId(), toRemove.playlistId()));
+                    }
                 }
             }
         }
 
-        int removedConfirmedPossible = 0;
+        int remaining = quotaExhausted ? Math.max(0, totalPlanned - attempted) : 0;
+        if (quotaExhausted) {
+            log.warn("Merge execute stopped early on YouTube quota exhaustion: {} operations left unattempted.", remaining);
+        }
+        // §5.15 precedence: quota exhaustion outranks per-item errors, which are still reported.
+        String status = quotaExhausted ? "quota_exhausted" : (errors.isEmpty() ? "completed" : "partial");
+        return new MergeExecuteResponse(status, new TargetRefDto(targetPlaylistId, targetTitle), added, removedExact,
+                removedConfirmedPossible, List.of(), remaining, errors);
+    }
+
+    private static int countPlannedExactRemovals(MergePlanRecord record, Set<String> excludedExactVideoIds) {
+        int count = 0;
+        for (RemovalPlanBuilder.ExactGroupPlan group : record.exactGroups()) {
+            if (!excludedExactVideoIds.contains(group.videoId())) {
+                count += group.remove().size();
+            }
+        }
+        return count;
+    }
+
+    private static int countPlannedPossibleRemovals(MergePlanRecord record, Set<String> confirmedPossibleGroupIds) {
+        int count = 0;
         for (String groupId : confirmedPossibleGroupIds) {
             RemovalPlanBuilder.PossibleGroupPlan group = record.possibleGroupsById().get(groupId);
-            if (group == null || group.items().size() < 2) {
-                continue; // unknown/stale groupId - ignore rather than error
-            }
-            List<PlaylistItemRecord> items = group.items();
-            // Keep the first item, remove the rest.
-            for (int i = 1; i < items.size(); i++) {
-                PlaylistItemRecord toRemove = items.get(i);
-                try {
-                    playlistService.deletePlaylistItem(toRemove.playlistItemId());
-                    removedConfirmedPossible++;
-                } catch (Exception e) {
-                    errors.add(new ExecuteErrorDto("Failed to remove possible duplicate: " + e.getMessage(),
-                            toRemove.videoId(), toRemove.playlistId()));
-                }
+            if (group != null && group.items().size() >= 2) {
+                count += group.items().size() - 1;
             }
         }
-
-        String status = errors.isEmpty() ? "completed" : "partial";
-        return new MergeExecuteResponse(status, new TargetRefDto(targetPlaylistId, targetTitle), added, removedExact,
-                removedConfirmedPossible, List.of(), errors);
+        return count;
     }
 }

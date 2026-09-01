@@ -12,6 +12,8 @@ import com.ytmusicmerger.backend.error.GoogleApiErrorTranslator;
 import com.ytmusicmerger.backend.plan.ExecuteErrorDto;
 import com.ytmusicmerger.backend.youtube.ThumbnailUtil;
 import com.ytmusicmerger.backend.youtube.YouTubeClientFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -31,6 +33,8 @@ import java.util.Set;
  */
 @Service
 public class PlaylistService {
+
+    private static final Logger log = LoggerFactory.getLogger(PlaylistService.class);
 
     private static final long PAGE_SIZE = 50L;
     // §5.13/§5.14: videos.rate is a 50-unit write call under YouTube Data API v3's published
@@ -246,21 +250,41 @@ public class PlaylistService {
 
         YouTube youTube = client();
         List<ExecuteErrorDto> errors = new ArrayList<>();
+        // §5.15: everything this run intends to rate; `remaining` is whatever we never got to.
+        long totalPlanned = uniqueVideoIds.stream().filter(id -> !likedVideoIds.contains(id)).count();
+        long attempted = 0;
+        boolean quotaExhausted = false;
         long liked = 0;
         for (String videoId : uniqueVideoIds) {
             if (likedVideoIds.contains(videoId)) {
                 continue;
             }
+            attempted++;
             try {
                 youTube.videos().rate(videoId, "like").execute();
                 liked++;
             } catch (Exception e) {
+                // §5.15: once the daily quota is gone every further rate call is doomed - stop
+                // instead of firing hundreds of identical failures, and report the stop via
+                // status + `remaining` rather than flooding `errors`.
+                if (GoogleApiErrorTranslator.isQuotaExhausted(e)) {
+                    // This item was attempted but never landed, so it still counts as left to do.
+                    attempted--;
+                    quotaExhausted = true;
+                    break;
+                }
                 errors.add(new ExecuteErrorDto("Failed to like video: " + e.getMessage(), videoId, playlistId));
             }
         }
 
-        String status = errors.isEmpty() ? "completed" : "partial";
-        return new LikeAllResponse(status, liked, likedVideoIds.size(), errors);
+        long remaining = quotaExhausted ? Math.max(0, totalPlanned - attempted) : 0;
+        if (quotaExhausted) {
+            log.warn("Like-all stopped early on YouTube quota exhaustion after {} likes: {} tracks left unattempted.",
+                    liked, remaining);
+        }
+        // §5.15 precedence: quota exhaustion outranks per-item errors, which are still reported.
+        String status = quotaExhausted ? "quota_exhausted" : (errors.isEmpty() ? "completed" : "partial");
+        return new LikeAllResponse(status, liked, likedVideoIds.size(), remaining, errors);
     }
 
     private List<String> uniqueVideoIds(List<PlaylistItemRecord> items) {

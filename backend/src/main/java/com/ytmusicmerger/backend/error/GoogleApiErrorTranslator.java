@@ -46,6 +46,36 @@ public final class GoogleApiErrorTranslator {
         return new ApiException(ErrorCode.INTERNAL_ERROR, "YouTube API request failed unexpectedly.");
     }
 
+    /**
+     * §5.15 quota-exhaustion stop rule: true when a failed write call means the day's YouTube
+     * API quota is gone and every remaining call in the loop is doomed. Uses exactly the same
+     * signals {@link #translate} maps to {@link ErrorCode#QUOTA_EXCEEDED} (HTTP 403 with a
+     * quota-related reason, or HTTP 429), so the two can never drift apart. Also recognises an
+     * already-translated {@link ApiException} and unwraps wrapped causes, since call sites catch
+     * a broad {@code Exception} around the YouTube client.
+     */
+    public static boolean isQuotaExhausted(Throwable ex) {
+        for (Throwable t = ex; t != null; t = t.getCause()) {
+            if (t instanceof ApiException apiEx && apiEx.code() == ErrorCode.QUOTA_EXCEEDED) {
+                return true;
+            }
+            if (t instanceof GoogleJsonResponseException gje) {
+                int status = gje.getStatusCode();
+                if (status == 429) {
+                    return true;
+                }
+                String reason = extractReason(gje);
+                if (status == 403 && reason != null && reason.toLowerCase().contains("quota")) {
+                    return true;
+                }
+            }
+            if (t.getCause() == t) {
+                break;
+            }
+        }
+        return false;
+    }
+
     private static String extractReason(GoogleJsonResponseException ex) {
         try {
             if (ex.getDetails() != null && ex.getDetails().getErrors() != null

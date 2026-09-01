@@ -145,8 +145,18 @@ export interface ExecuteError {
   playlistId: string;
 }
 
+/**
+ * §5.15 — outcome of an execute write loop.
+ * "quota_exhausted": the loop hit the daily YouTube API quota and stopped at that item
+ * rather than firing further doomed calls. The item that tripped the quota is NOT in
+ * `errors`; it's represented by this status plus `remaining`.
+ */
+export type ExecuteStatus = "completed" | "partial" | "quota_exhausted";
+
 export interface MergeExecuteResponse {
-  status: "completed" | "partial";
+  status: ExecuteStatus;
+  /** §5.15 — items left unattempted when the loop stopped. Always present, 0 otherwise. */
+  remaining: number;
   target: { playlistId: string; title: string };
   added: number;
   removedExact: number;
@@ -178,7 +188,9 @@ export interface DedupeExecuteRequest {
 }
 
 export interface DedupeExecuteResponse {
-  status: "completed" | "partial";
+  status: ExecuteStatus;
+  /** §5.15 — items left unattempted when the loop stopped. Always present, 0 otherwise. */
+  remaining: number;
   playlistId: string;
   removedExact: number;
   removedConfirmedPossible: number;
@@ -206,7 +218,9 @@ export interface LikePreviewResponse {
 
 // §5.14
 export interface LikeAllResponse {
-  status: "completed" | "partial";
+  status: ExecuteStatus;
+  /** §5.15 — tracks left unattempted when the loop stopped. Always present, 0 otherwise. */
+  remaining: number;
   liked: number;
   alreadyLiked: number;
   errors: ExecuteError[];
