@@ -203,6 +203,18 @@ public class PlaylistService {
         client().playlistItems().delete(playlistItemId).execute();
     }
 
+    /** §5.12 - deletes a playlist outright. Atomic, no plan/preview step. */
+    public void deletePlaylist(String playlistId) {
+        try {
+            client().playlists().delete(playlistId).execute();
+        } catch (IOException e) {
+            if (e instanceof GoogleJsonResponseException gje) {
+                throw GoogleApiErrorTranslator.translate(gje);
+            }
+            throw new ApiException(ErrorCode.INTERNAL_ERROR, "Failed to delete the playlist on YouTube.");
+        }
+    }
+
     private List<Playlist> fetchAllOwnPlaylists(YouTube youTube) {
         List<Playlist> all = new ArrayList<>();
         String pageToken = null;

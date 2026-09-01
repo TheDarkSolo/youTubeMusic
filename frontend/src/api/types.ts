@@ -177,3 +177,9 @@ export interface DedupeExecuteResponse {
   removedConfirmedPossible: number;
   errors: unknown[];
 }
+
+// §5.12
+export interface DeletePlaylistResponse {
+  deleted: boolean;
+  playlistId: string;
+}

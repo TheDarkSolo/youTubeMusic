@@ -5,6 +5,7 @@ import type {
   DedupeExecuteResponse,
   DedupePreviewRequest,
   DedupePreviewResponse,
+  DeletePlaylistResponse,
   MergeExecuteRequest,
   MergeExecuteResponse,
   MergePreviewRequest,
@@ -115,5 +116,10 @@ export const api = {
     request<DedupeExecuteResponse>("/api/dedupe/execute", {
       method: "POST",
       body: JSON.stringify(body),
+    }),
+
+  deletePlaylist: (playlistId: string) =>
+    request<DeletePlaylistResponse>(`/api/playlists/${encodeURIComponent(playlistId)}`, {
+      method: "DELETE",
     }),
 };

@@ -11,6 +11,9 @@ interface Props {
   selectable?: boolean;
   selectedIds?: Set<string>;
   onToggleSelect?: (playlist: Playlist) => void;
+  onDeleteClick?: (playlist: Playlist) => void;
+  deleteLoadingPlaylistId?: string | null;
+  deleteDisabled?: boolean;
 }
 
 /** A bordered cluster of playlists the backend flagged as likely duplicates of each other. */
@@ -24,8 +27,15 @@ export function DuplicateGroupCard({
   selectable = false,
   selectedIds,
   onToggleSelect,
+  onDeleteClick,
+  deleteLoadingPlaylistId = null,
+  deleteDisabled = false,
 }: Props) {
   const members = playlists.filter((p) => group.playlistIds.includes(p.id));
+  // §5.12 gating: only the "losing" side of the group (strictly fewer tracks than the
+  // largest member) is eligible for the delete action.
+  const maxItemCount = Math.max(...members.map((p) => p.itemCount));
+  const isDeletable = (p: Playlist) => p.itemCount < maxItemCount;
   return (
     <div className="dup-group">
       <div className="dup-group__header">
@@ -48,6 +58,9 @@ export function DuplicateGroupCard({
             selectable={selectable}
             selected={selectedIds?.has(p.id) ?? false}
             onToggleSelect={onToggleSelect}
+            onDeleteClick={isDeletable(p) ? onDeleteClick : undefined}
+            deleteLoading={deleteLoadingPlaylistId === p.id}
+            deleteDisabled={deleteDisabled}
           />
         ))}
       </div>

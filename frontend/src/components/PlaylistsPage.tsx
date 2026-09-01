@@ -37,6 +37,7 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
   const [loading, setLoading] = useState(true);
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [dedupeLoadingId, setDedupeLoadingId] = useState<string | null>(null);
+  const [deleteLoadingId, setDeleteLoadingId] = useState<string | null>(null);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const { reportError, quotaCoolingDown } = useErrors();
@@ -76,6 +77,25 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
       reportError(err);
     } finally {
       setDedupeLoadingId(null);
+    }
+  }
+
+  async function handleDeleteClick(playlist: Playlist) {
+    const confirmed = window.confirm(
+      `Delete playlist "${playlist.title}" (${playlist.itemCount} track${
+        playlist.itemCount === 1 ? "" : "s"
+      })? This cannot be undone.`,
+    );
+    if (!confirmed) return;
+
+    setDeleteLoadingId(playlist.id);
+    try {
+      await api.deletePlaylist(playlist.id);
+      await fetchPlaylists();
+    } catch (err) {
+      reportError(err);
+    } finally {
+      setDeleteLoadingId(null);
     }
   }
 
@@ -156,6 +176,9 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
                   selectable={selectMode}
                   selectedIds={selectedIds}
                   onToggleSelect={toggleSelectPlaylist}
+                  onDeleteClick={handleDeleteClick}
+                  deleteLoadingPlaylistId={deleteLoadingId}
+                  deleteDisabled={quotaCoolingDown || deleteLoadingId !== null}
                 />
               ))}
             </section>

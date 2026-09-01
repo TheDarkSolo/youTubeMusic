@@ -10,6 +10,10 @@ interface Props {
   selectable?: boolean;
   selected?: boolean;
   onToggleSelect?: (playlist: Playlist) => void;
+  /** Only passed for duplicate-group members that are eligible for deletion (§5.12 gating). */
+  onDeleteClick?: (playlist: Playlist) => void;
+  deleteLoading?: boolean;
+  deleteDisabled?: boolean;
 }
 
 export function PlaylistCard({
@@ -20,6 +24,9 @@ export function PlaylistCard({
   selectable = false,
   selected = false,
   onToggleSelect,
+  onDeleteClick,
+  deleteLoading = false,
+  deleteDisabled = false,
 }: Props) {
   return (
     <div className={`playlist-card${selectable ? " playlist-card--selectable" : ""}`}>
@@ -53,6 +60,15 @@ export function PlaylistCard({
         >
           {dedupeLoading ? "Checking for duplicates…" : "Remove duplicate tracks"}
         </button>
+        {onDeleteClick && (
+          <button
+            className="btn btn--danger btn--small"
+            disabled={deleteDisabled}
+            onClick={() => onDeleteClick(playlist)}
+          >
+            {deleteLoading ? "Deleting…" : "Delete playlist"}
+          </button>
+        )}
       </div>
     </div>
   );
