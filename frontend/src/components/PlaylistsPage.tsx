@@ -145,7 +145,9 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
   const playlists = data?.playlists ?? [];
   const groups = data?.duplicateGroups ?? [];
   const groupedIds = new Set(groups.flatMap((g) => g.playlistIds));
-  const singles = playlists.filter((p) => !groupedIds.has(p.id));
+  const singles = playlists
+    .filter((p) => !groupedIds.has(p.id))
+    .sort((a, b) => b.itemCount - a.itemCount);
   const selectedCount = selectedIds.size;
   const selectedPlaylists = playlists.filter((p) => selectedIds.has(p.id));
 
