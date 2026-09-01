@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ApiError, api } from "../api/client";
 import type { MergeExecuteResponse, MergePreviewResponse, MergeTarget } from "../api/types";
 import { useErrors } from "../context/ErrorContext";
@@ -38,6 +38,22 @@ export function MergeReview({ preview, sourcePlaylistIds, target, onCancel, onCo
       else next.add(videoId);
       return next;
     });
+  }
+
+  const exactTotal = livePreview.plannedRemovals.exact.length;
+  const allExactIncluded = uncheckedExact.size === 0;
+  const allExactExcluded = exactTotal > 0 && uncheckedExact.size === exactTotal;
+  const selectAllExactRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (selectAllExactRef.current) {
+      selectAllExactRef.current.indeterminate = !allExactIncluded && !allExactExcluded;
+    }
+  }, [allExactIncluded, allExactExcluded]);
+
+  function toggleAllExact() {
+    setUncheckedExact(
+      allExactIncluded ? new Set(livePreview.plannedRemovals.exact.map((r) => r.videoId)) : new Set(),
+    );
   }
 
   function togglePossible(groupId: string) {
@@ -155,6 +171,21 @@ export function MergeReview({ preview, sourcePlaylistIds, target, onCancel, onCo
           <p className="hint">No exact duplicates found.</p>
         ) : (
           <>
+            <label className="select-all-row">
+              <input
+                ref={selectAllExactRef}
+                type="checkbox"
+                checked={allExactIncluded}
+                onChange={toggleAllExact}
+              />
+              <strong>Also remove duplicate tracks</strong>
+              <span className="muted">
+                {" "}
+                — uncheck to only add the {addCount} new track{addCount === 1 ? "" : "s"} and skip all {exactTotal}{" "}
+                removal{exactTotal === 1 ? "" : "s"} (removals cost most of the quota; you can also do them
+                yourself in YouTube Music).
+              </span>
+            </label>
             <ul className="checkbox-list">
               {livePreview.plannedRemovals.exact.map((r) => (
                 <li key={r.videoId}>
