@@ -183,3 +183,24 @@ export interface DeletePlaylistResponse {
   deleted: boolean;
   playlistId: string;
 }
+
+// §5.13 — like-preview has no maxAdditionalUnits (no optional-confirm groups like merge/dedupe).
+export interface LikeEstimatedQuota {
+  committedUnits: number;
+}
+
+export interface LikePreviewResponse {
+  playlistId: string;
+  totalTracks: number;
+  alreadyLiked: number;
+  toLike: number;
+  estimatedQuota: LikeEstimatedQuota;
+}
+
+// §5.14
+export interface LikeAllResponse {
+  status: "completed" | "partial";
+  liked: number;
+  alreadyLiked: number;
+  errors: unknown[];
+}

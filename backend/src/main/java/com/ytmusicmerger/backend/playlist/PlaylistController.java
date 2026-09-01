@@ -2,7 +2,7 @@ package com.ytmusicmerger.backend.playlist;
 
 import org.springframework.web.bind.annotation.*;
 
-/** §5.5-5.6, §5.12. */
+/** §5.5-5.6, §5.12-5.14. */
 @RestController
 @RequestMapping("/api/playlists")
 public class PlaylistController {
@@ -28,5 +28,15 @@ public class PlaylistController {
     public DeletePlaylistResponse deletePlaylist(@PathVariable String playlistId) {
         playlistService.deletePlaylist(playlistId);
         return new DeletePlaylistResponse(true, playlistId);
+    }
+
+    @GetMapping("/{playlistId}/like-preview")
+    public LikePreviewResponse likePreview(@PathVariable String playlistId) {
+        return playlistService.likePreview(playlistId);
+    }
+
+    @PostMapping("/{playlistId}/like-all")
+    public LikeAllResponse likeAll(@PathVariable String playlistId) {
+        return playlistService.likeAll(playlistId);
     }
 }

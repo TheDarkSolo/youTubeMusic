@@ -14,6 +14,10 @@ interface Props {
   onDeleteClick?: (playlist: Playlist) => void;
   deleteLoading?: boolean;
   deleteDisabled?: boolean;
+  /** §5.13/5.14 — general-purpose, shown on every card regardless of duplicate-group membership. */
+  onLikeClick: (playlist: Playlist) => void;
+  likeLoading?: boolean;
+  likeDisabled?: boolean;
 }
 
 export function PlaylistCard({
@@ -27,6 +31,9 @@ export function PlaylistCard({
   onDeleteClick,
   deleteLoading = false,
   deleteDisabled = false,
+  onLikeClick,
+  likeLoading = false,
+  likeDisabled = false,
 }: Props) {
   return (
     <div className={`playlist-card${selectable ? " playlist-card--selectable" : ""}`}>
@@ -59,6 +66,14 @@ export function PlaylistCard({
           onClick={() => onDedupeClick(playlist)}
         >
           {dedupeLoading ? "Checking for duplicates…" : "Remove duplicate tracks"}
+        </button>
+        <button
+          className="btn btn--secondary btn--small"
+          disabled={likeDisabled}
+          onClick={() => onLikeClick(playlist)}
+          title="Like every track in this playlist so it shows up in your YouTube Music Liked Music — useful for a playlist imported from another service's Liked/Favorites list."
+        >
+          {likeLoading ? "Checking tracks…" : "Add to Liked Music"}
         </button>
         {onDeleteClick && (
           <button

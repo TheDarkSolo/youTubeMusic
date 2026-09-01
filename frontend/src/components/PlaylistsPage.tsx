@@ -3,6 +3,8 @@ import { api } from "../api/client";
 import type {
   DedupeExecuteResponse,
   DedupePreviewResponse,
+  LikeAllResponse,
+  LikePreviewResponse,
   MergeExecuteResponse,
   MergePreviewResponse,
   MergeTarget,
@@ -12,6 +14,7 @@ import type {
 import { useErrors } from "../context/ErrorContext";
 import { DedupeReview } from "./DedupeReview";
 import { DuplicateGroupCard } from "./DuplicateGroupCard";
+import { LikeReview } from "./LikeReview";
 import { Logo } from "./Logo";
 import { MergeReview } from "./MergeReview";
 import { MergeSetup } from "./MergeSetup";
@@ -25,6 +28,8 @@ type Overlay =
   | { kind: "mergeDone"; result: MergeExecuteResponse }
   | { kind: "dedupeReview"; preview: DedupePreviewResponse; playlistTitle: string }
   | { kind: "dedupeDone"; result: DedupeExecuteResponse }
+  | { kind: "likeReview"; preview: LikePreviewResponse; playlistTitle: string }
+  | { kind: "likeDone"; result: LikeAllResponse }
   | null;
 
 interface Props {
@@ -38,6 +43,7 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [dedupeLoadingId, setDedupeLoadingId] = useState<string | null>(null);
   const [deleteLoadingId, setDeleteLoadingId] = useState<string | null>(null);
+  const [likeLoadingId, setLikeLoadingId] = useState<string | null>(null);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const { reportError, quotaCoolingDown } = useErrors();
@@ -96,6 +102,18 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
       reportError(err);
     } finally {
       setDeleteLoadingId(null);
+    }
+  }
+
+  async function handleLikeClick(playlist: Playlist) {
+    setLikeLoadingId(playlist.id);
+    try {
+      const preview = await api.likePreview(playlist.id);
+      setOverlay({ kind: "likeReview", preview, playlistTitle: playlist.title });
+    } catch (err) {
+      reportError(err);
+    } finally {
+      setLikeLoadingId(null);
     }
   }
 
@@ -179,6 +197,9 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
                   onDeleteClick={handleDeleteClick}
                   deleteLoadingPlaylistId={deleteLoadingId}
                   deleteDisabled={quotaCoolingDown || deleteLoadingId !== null}
+                  onLikeClick={handleLikeClick}
+                  likeLoadingPlaylistId={likeLoadingId}
+                  likeDisabled={quotaCoolingDown || likeLoadingId !== null}
                 />
               ))}
             </section>
@@ -200,6 +221,9 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
                     selectable={selectMode}
                     selected={selectedIds.has(p.id)}
                     onToggleSelect={toggleSelectPlaylist}
+                    onLikeClick={handleLikeClick}
+                    likeLoading={likeLoadingId === p.id}
+                    likeDisabled={quotaCoolingDown || likeLoadingId !== null}
                   />
                 ))}
               </div>
@@ -297,6 +321,34 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
           <p>
             Removed {overlay.result.removedExact} exact and {overlay.result.removedConfirmedPossible}{" "}
             confirmed possible duplicates.
+          </p>
+          {overlay.result.errors.length > 0 && (
+            <p className="hint hint--warn">{overlay.result.errors.length} item(s) failed — see server logs.</p>
+          )}
+          <div className="modal__actions">
+            <button className="btn btn--primary" onClick={() => setOverlay(null)}>
+              Done
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {overlay?.kind === "likeReview" && (
+        <Modal title={`Add to Liked Music — ${overlay.playlistTitle}`} onClose={() => setOverlay(null)}>
+          <LikeReview
+            preview={overlay.preview}
+            playlistTitle={overlay.playlistTitle}
+            onCancel={() => setOverlay(null)}
+            onCompleted={(result) => setOverlay({ kind: "likeDone", result })}
+          />
+        </Modal>
+      )}
+
+      {overlay?.kind === "likeDone" && (
+        <Modal title="Liked Music updated" onClose={() => setOverlay(null)}>
+          <p>
+            Status: <strong>{overlay.result.status}</strong>. Liked {overlay.result.liked} track
+            {overlay.result.liked === 1 ? "" : "s"} ({overlay.result.alreadyLiked} were already liked).
           </p>
           {overlay.result.errors.length > 0 && (
             <p className="hint hint--warn">{overlay.result.errors.length} item(s) failed — see server logs.</p>

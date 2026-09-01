@@ -14,6 +14,9 @@ interface Props {
   onDeleteClick?: (playlist: Playlist) => void;
   deleteLoadingPlaylistId?: string | null;
   deleteDisabled?: boolean;
+  onLikeClick: (playlist: Playlist) => void;
+  likeLoadingPlaylistId: string | null;
+  likeDisabled: boolean;
 }
 
 /** A bordered cluster of playlists the backend flagged as likely duplicates of each other. */
@@ -30,6 +33,9 @@ export function DuplicateGroupCard({
   onDeleteClick,
   deleteLoadingPlaylistId = null,
   deleteDisabled = false,
+  onLikeClick,
+  likeLoadingPlaylistId,
+  likeDisabled,
 }: Props) {
   const members = playlists.filter((p) => group.playlistIds.includes(p.id));
   // §5.12 gating: only the "losing" side of the group (strictly fewer tracks than the
@@ -61,6 +67,9 @@ export function DuplicateGroupCard({
             onDeleteClick={isDeletable(p) ? onDeleteClick : undefined}
             deleteLoading={deleteLoadingPlaylistId === p.id}
             deleteDisabled={deleteDisabled}
+            onLikeClick={onLikeClick}
+            likeLoading={likeLoadingPlaylistId === p.id}
+            likeDisabled={likeDisabled}
           />
         ))}
       </div>

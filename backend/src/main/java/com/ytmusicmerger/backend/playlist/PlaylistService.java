@@ -9,6 +9,7 @@ import com.ytmusicmerger.backend.detect.DuplicatePlaylistDetector;
 import com.ytmusicmerger.backend.error.ApiException;
 import com.ytmusicmerger.backend.error.ErrorCode;
 import com.ytmusicmerger.backend.error.GoogleApiErrorTranslator;
+import com.ytmusicmerger.backend.plan.ExecuteErrorDto;
 import com.ytmusicmerger.backend.youtube.ThumbnailUtil;
 import com.ytmusicmerger.backend.youtube.YouTubeClientFactory;
 import org.springframework.stereotype.Service;
@@ -16,8 +17,11 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Wraps {@code playlists.list}, {@code playlistItems.list}, {@code playlistItems.insert},
@@ -29,6 +33,9 @@ import java.util.Map;
 public class PlaylistService {
 
     private static final long PAGE_SIZE = 50L;
+    // §5.13/§5.14: videos.rate is a 50-unit write call under YouTube Data API v3's published
+    // quota costs; videos.getRating (list-style read) is 1 unit and ignored as negligible.
+    private static final long RATE_QUOTA_COST = 50L;
 
     private final YouTubeClientFactory clientFactory;
     private final AuthService authService;
@@ -213,6 +220,87 @@ public class PlaylistService {
             }
             throw new ApiException(ErrorCode.INTERNAL_ERROR, "Failed to delete the playlist on YouTube.");
         }
+    }
+
+    /** §5.13 - read-only: checks current like status for a playlist's unique tracks. */
+    public LikePreviewResponse likePreview(String playlistId) {
+        List<PlaylistItemRecord> items = fetchAllTracks(playlistId);
+        List<String> uniqueVideoIds = uniqueVideoIds(items);
+        Set<String> likedVideoIds = fetchLikedVideoIds(uniqueVideoIds);
+
+        long alreadyLiked = likedVideoIds.size();
+        long toLike = uniqueVideoIds.size() - alreadyLiked;
+        return new LikePreviewResponse(playlistId, items.size(), alreadyLiked, toLike,
+                new LikeQuotaDto(toLike * RATE_QUOTA_COST));
+    }
+
+    /**
+     * §5.14 - likes every currently-unliked unique track. No plan-token/staleness check
+     * (intentional per §5.14: liking is idempotent/non-destructive, so acting on freshly-fetched
+     * state rather than a cached preview snapshot carries no hazard).
+     */
+    public LikeAllResponse likeAll(String playlistId) {
+        List<PlaylistItemRecord> items = fetchAllTracks(playlistId);
+        List<String> uniqueVideoIds = uniqueVideoIds(items);
+        Set<String> likedVideoIds = fetchLikedVideoIds(uniqueVideoIds);
+
+        YouTube youTube = client();
+        List<ExecuteErrorDto> errors = new ArrayList<>();
+        long liked = 0;
+        for (String videoId : uniqueVideoIds) {
+            if (likedVideoIds.contains(videoId)) {
+                continue;
+            }
+            try {
+                youTube.videos().rate(videoId, "like").execute();
+                liked++;
+            } catch (Exception e) {
+                errors.add(new ExecuteErrorDto("Failed to like video: " + e.getMessage(), videoId, playlistId));
+            }
+        }
+
+        String status = errors.isEmpty() ? "completed" : "partial";
+        return new LikeAllResponse(status, liked, likedVideoIds.size(), errors);
+    }
+
+    private List<String> uniqueVideoIds(List<PlaylistItemRecord> items) {
+        LinkedHashSet<String> ids = new LinkedHashSet<>();
+        for (PlaylistItemRecord item : items) {
+            if (item.videoId() != null) {
+                ids.add(item.videoId());
+            }
+        }
+        return new ArrayList<>(ids);
+    }
+
+    /** Batched {@code videos.getRating} (1 unit per call, up to 50 ids); returns the subset
+     * of {@code videoIds} whose caller rating is currently {@code "like"}. */
+    private Set<String> fetchLikedVideoIds(List<String> videoIds) {
+        if (videoIds.isEmpty()) {
+            return Set.of();
+        }
+        YouTube youTube = client();
+        Set<String> liked = new HashSet<>();
+        int chunkSize = 50;
+        try {
+            for (int i = 0; i < videoIds.size(); i += chunkSize) {
+                List<String> chunk = videoIds.subList(i, Math.min(i + chunkSize, videoIds.size()));
+                VideoGetRatingResponse response = youTube.videos().getRating(chunk).execute();
+                if (response.getItems() != null) {
+                    for (VideoRating rating : response.getItems()) {
+                        if ("like".equals(rating.getRating())) {
+                            liked.add(rating.getVideoId());
+                        }
+                    }
+                }
+            }
+        } catch (IOException e) {
+            if (e instanceof GoogleJsonResponseException gje) {
+                throw GoogleApiErrorTranslator.translate(gje);
+            }
+            throw new ApiException(ErrorCode.INTERNAL_ERROR, "Failed to fetch like status from YouTube.");
+        }
+        return liked;
     }
 
     private List<Playlist> fetchAllOwnPlaylists(YouTube youTube) {

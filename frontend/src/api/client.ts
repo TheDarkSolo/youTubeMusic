@@ -6,6 +6,8 @@ import type {
   DedupePreviewRequest,
   DedupePreviewResponse,
   DeletePlaylistResponse,
+  LikeAllResponse,
+  LikePreviewResponse,
   MergeExecuteRequest,
   MergeExecuteResponse,
   MergePreviewRequest,
@@ -121,5 +123,15 @@ export const api = {
   deletePlaylist: (playlistId: string) =>
     request<DeletePlaylistResponse>(`/api/playlists/${encodeURIComponent(playlistId)}`, {
       method: "DELETE",
+    }),
+
+  likePreview: (playlistId: string) =>
+    request<LikePreviewResponse>(
+      `/api/playlists/${encodeURIComponent(playlistId)}/like-preview`,
+    ),
+
+  likeAll: (playlistId: string) =>
+    request<LikeAllResponse>(`/api/playlists/${encodeURIComponent(playlistId)}/like-all`, {
+      method: "POST",
     }),
 };
