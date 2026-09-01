@@ -138,6 +138,13 @@ export interface MergeExecuteRequest {
   excludedExactVideoIds?: string[];
 }
 
+/** §5.9/§5.11/§5.14 per-item execute failure - carries why a specific track failed. */
+export interface ExecuteError {
+  message: string;
+  videoId: string;
+  playlistId: string;
+}
+
 export interface MergeExecuteResponse {
   status: "completed" | "partial";
   target: { playlistId: string; title: string };
@@ -145,7 +152,7 @@ export interface MergeExecuteResponse {
   removedExact: number;
   removedConfirmedPossible: number;
   sourcePlaylistsDeleted: string[];
-  errors: unknown[];
+  errors: ExecuteError[];
 }
 
 export interface DedupePreviewRequest {
@@ -175,7 +182,7 @@ export interface DedupeExecuteResponse {
   playlistId: string;
   removedExact: number;
   removedConfirmedPossible: number;
-  errors: unknown[];
+  errors: ExecuteError[];
 }
 
 // §5.12
@@ -202,5 +209,5 @@ export interface LikeAllResponse {
   status: "completed" | "partial";
   liked: number;
   alreadyLiked: number;
-  errors: unknown[];
+  errors: ExecuteError[];
 }

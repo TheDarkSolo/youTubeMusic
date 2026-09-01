@@ -7,12 +7,17 @@ interface Props {
   wide?: boolean;
 }
 
+/**
+ * Deliberately does NOT close on backdrop click - these modals carry results the
+ * user needs to read (failure counts, liked/removed totals) or a plan they're
+ * mid-way through reviewing, and a stray click outside used to discard that.
+ * Closing is explicit: the × button, or the flow's own Cancel/Done action.
+ */
 export function Modal({ title, onClose, children, wide }: Props) {
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className="modal-backdrop">
       <div
         className={`modal ${wide ? "modal--wide" : ""}`}
-        onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label={title}

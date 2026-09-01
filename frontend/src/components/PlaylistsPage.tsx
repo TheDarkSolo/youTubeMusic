@@ -3,6 +3,7 @@ import { api } from "../api/client";
 import type {
   DedupeExecuteResponse,
   DedupePreviewResponse,
+  ExecuteError,
   LikeAllResponse,
   LikePreviewResponse,
   MergeExecuteResponse,
@@ -31,6 +32,33 @@ type Overlay =
   | { kind: "likeReview"; preview: LikePreviewResponse; playlistTitle: string }
   | { kind: "likeDone"; result: LikeAllResponse }
   | null;
+
+/**
+ * Per-item failures from a merge/dedupe/like execute. The backend already sends the
+ * reason for each one, so show it rather than pointing at server logs the user has no
+ * practical way to read - in practice these are almost always the daily YouTube API
+ * quota running out partway through a large batch, which is worth saying plainly.
+ */
+function ExecuteErrors({ errors }: { errors: ExecuteError[] }) {
+  if (errors.length === 0) return null;
+  const reason = errors[0]?.message ?? "";
+  const looksLikeQuota = /quota/i.test(reason);
+  return (
+    <div className="hint hint--warn">
+      <p>
+        {errors.length} track{errors.length === 1 ? "" : "s"} could not be processed.
+      </p>
+      {looksLikeQuota ? (
+        <p>
+          Your daily YouTube API quota (10,000 units) ran out partway through. It resets at
+          midnight Pacific time — run this again then to finish the rest.
+        </p>
+      ) : (
+        <p>Reason: {reason}</p>
+      )}
+    </div>
+  );
+}
 
 interface Props {
   channelTitle?: string;
@@ -293,9 +321,7 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
             removed {overlay.result.removedExact} exact and {overlay.result.removedConfirmedPossible}{" "}
             confirmed possible duplicates into "{overlay.result.target.title}".
           </p>
-          {overlay.result.errors.length > 0 && (
-            <p className="hint hint--warn">{overlay.result.errors.length} item(s) failed — see server logs.</p>
-          )}
+          <ExecuteErrors errors={overlay.result.errors} />
           <div className="modal__actions">
             <button className="btn btn--primary" onClick={() => setOverlay(null)}>
               Done
@@ -324,9 +350,7 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
             Removed {overlay.result.removedExact} exact and {overlay.result.removedConfirmedPossible}{" "}
             confirmed possible duplicates.
           </p>
-          {overlay.result.errors.length > 0 && (
-            <p className="hint hint--warn">{overlay.result.errors.length} item(s) failed — see server logs.</p>
-          )}
+          <ExecuteErrors errors={overlay.result.errors} />
           <div className="modal__actions">
             <button className="btn btn--primary" onClick={() => setOverlay(null)}>
               Done
@@ -352,9 +376,7 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
             Status: <strong>{overlay.result.status}</strong>. Liked {overlay.result.liked} track
             {overlay.result.liked === 1 ? "" : "s"} ({overlay.result.alreadyLiked} were already liked).
           </p>
-          {overlay.result.errors.length > 0 && (
-            <p className="hint hint--warn">{overlay.result.errors.length} item(s) failed — see server logs.</p>
-          )}
+          <ExecuteErrors errors={overlay.result.errors} />
           <div className="modal__actions">
             <button className="btn btn--primary" onClick={() => setOverlay(null)}>
               Done
