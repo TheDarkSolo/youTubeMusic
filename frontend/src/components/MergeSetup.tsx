@@ -101,7 +101,7 @@ export function MergeSetup({ initialPlaylistIds, playlists, onCancel, onPreviewR
             .filter((p) => selectedIds.has(p.id))
             .map((p) => (
               <option key={p.id} value={p.id}>
-                {p.title}
+                {p.title} ({p.itemCount} tracks)
               </option>
             ))}
         </select>
