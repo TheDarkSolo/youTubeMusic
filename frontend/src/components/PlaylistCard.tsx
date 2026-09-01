@@ -108,15 +108,20 @@ export function PlaylistCard({
             <DuplicateIcon />
             {dedupeLoading ? "Checking for duplicates…" : "Remove duplicate tracks"}
           </button>
-          <button
-            className="btn btn--secondary btn--small btn--like"
-            disabled={likeDisabled}
-            onClick={() => onLikeClick(playlist)}
-            title="Like every track here so it appears in your YouTube Music Liked Music — handy for a playlist imported from another service (e.g. a Spotify Liked Songs export)."
-          >
-            <HeartIcon />
-            {likeLoading ? "Checking tracks…" : "Add to Liked Music"}
-          </button>
+          <span className="tooltip-wrap">
+            <button
+              className="btn btn--secondary btn--small btn--like"
+              disabled={likeDisabled}
+              onClick={() => onLikeClick(playlist)}
+            >
+              <HeartIcon />
+              {likeLoading ? "Checking tracks…" : "Add to Liked Music"}
+            </button>
+            <span className="tooltip-bubble" role="tooltip">
+              Like every track here so it appears in your YouTube Music Liked Music — handy for a
+              playlist imported from another service (e.g. a Spotify Liked Songs export).
+            </span>
+          </span>
           {onDeleteClick && (
             <button
               className="btn btn--danger btn--small"
