@@ -413,6 +413,23 @@ Response: same shape as `plannedRemovals` in §5.8, wrapped with a `planToken`:
   ```
 - Before applying operations, the server re-fetches current `playlistItems` for every playlist referenced in the plan and compares against the snapshot hash stored with the `PlanRecord`. If they differ (user changed something in YouTube Music directly, e.g. on their phone, between preview and execute) → `409 PLAN_STALE` (§5.7), plan is discarded, no partial writes are attempted.
 
+### 5.12 `DELETE /api/playlists/{playlistId}`
+
+Deletes a playlist outright (`playlists.delete`). This is the "later iteration" flagged as a non-goal in §7 of earlier drafts — merge/dedupe leave emptied source playlists in place, and this endpoint is how the user cleans them up afterward, as a separate deliberate action.
+
+No plan-token/preview step: unlike merge/dedupe there is nothing to diff or partially apply — deleting one playlist by id is atomic and has no "what will change" ambiguity to preview. Explicit confirmation instead happens client-side (the frontend must show a confirmation dialog naming the playlist and its track count before calling this endpoint) — this satisfies the same "no destructive action without explicit user confirmation" rule the rest of the API follows, just via a simpler mechanism appropriate to a single atomic operation.
+
+```jsonc
+// 200 OK
+{ "deleted": true, "playlistId": "PLxxxxxxxxxxxxxxxxxx" }
+```
+
+Errors follow §5.7 (404 if the playlist doesn't exist or isn't owned by the user, 403/401/429 as usual).
+
+**Frontend gating**: the "Delete playlist" action is only surfaced for a playlist that is a member of a detected duplicate group (§3) *and* has strictly fewer tracks (`itemCount`) than the group's largest member — i.e. it's presented as cleanup for the "losing" side of a duplicate pair, not as a general-purpose delete-any-playlist button. Singleton playlists (no `duplicateGroupId`) never show this action.
+
+**Known caveat**: YouTube's `contentDetails.itemCount` (used for both the number shown on playlist cards and the "fewer tracks" comparison above) can lag behind the playlist's actual contents — observed in practice as a playlist showing `itemCount: 1` in this app while YouTube Music's own UI shows 0 tracks for the same playlist. This is a caching quirk on YouTube's side, not something this app's read path gets wrong (the same `playlists.list.contentDetails.itemCount` field YouTube Music's own UI would also ultimately derive from, just resolved at different times). No fix is applied for this in v1; the existing "Show tracks" action (§5.6, a live `playlistItems.list` call) is the accurate real-time source of truth if the user wants to double-check before deleting.
+
 ---
 
 ## 6. Backend Environment Variables
