@@ -95,6 +95,6 @@ export function buildLikeAllScript(expectedTracks: number): string {
     await sleep(CLICK_DELAY_MS);
   }
 
-  console.log('Done - liked ' + buttons.length + ' tracks, without using any API quota.');
+  console.log('Finished! ' + buttons.length + ' track' + (buttons.length === 1 ? '' : 's') + ' liked. Enjoy 🎵');
 })();`;
 }
