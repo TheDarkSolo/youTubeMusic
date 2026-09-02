@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { LikeAllResponse, LikePreviewResponse } from "../api/types";
 import { useErrors } from "../context/ErrorContext";
+import { LIKE_ALL_CONSOLE_SCRIPT } from "../lib/likeAllScript";
 import { Spinner } from "./Spinner";
 
 interface Props {
@@ -11,16 +12,40 @@ interface Props {
   onCompleted: (result: LikeAllResponse) => void;
 }
 
+/** The console script clicks one Like button every 500ms — see likeAllScript.ts. */
+const SCRIPT_SECONDS_PER_TRACK = 0.5;
+
+function roughRuntime(trackCount: number): string {
+  const seconds = Math.round(trackCount * SCRIPT_SECONDS_PER_TRACK);
+  if (seconds < 90) return `about ${seconds} seconds`;
+  const minutes = Math.round(seconds / 60);
+  return `about ${minutes} minute${minutes === 1 ? "" : "s"}`;
+}
+
 /**
  * §5.13/5.14 — confirm dialog for bulk-liking every not-yet-liked track in a playlist.
  * No plan-token/staleness machinery here (unlike merge/dedupe): like-all is idempotent
  * and re-fetches fresh state at execute time, so there's nothing to go stale.
+ *
+ * Offers two genuine routes: the API one (precise, costs quota, capped at 10,000 units/day)
+ * and a browser-console script the user runs on music.youtube.com themselves (free, no quota,
+ * but slower and only as precise as what the page shows). We can't run that script for them —
+ * different origin — so we hand it over with a copy button and instructions.
  */
 export function LikeReview({ preview, playlistTitle, onCancel, onCompleted }: Props) {
   const [submitting, setSubmitting] = useState(false);
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
   const { reportError, quotaCoolingDown } = useErrors();
 
   const quotaIsHigh = preview.estimatedQuota.committedUnits > 7000;
+  const playlistUrl = `https://music.youtube.com/playlist?list=${preview.playlistId}`;
+
+  // Revert the "Copied!" confirmation on its own; clears if the modal closes first.
+  useEffect(() => {
+    if (copyState !== "copied") return;
+    const timer = window.setTimeout(() => setCopyState("idle"), 2000);
+    return () => window.clearTimeout(timer);
+  }, [copyState]);
 
   async function handleConfirm() {
     setSubmitting(true);
@@ -31,6 +56,17 @@ export function LikeReview({ preview, playlistTitle, onCancel, onCompleted }: Pr
       reportError(err);
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleCopyScript() {
+    try {
+      await navigator.clipboard.writeText(LIKE_ALL_CONSOLE_SCRIPT);
+      setCopyState("copied");
+    } catch {
+      // Clipboard access can be blocked (permissions, insecure context). Fall back to
+      // showing the script so the user can select and copy it by hand.
+      setCopyState("failed");
     }
   }
 
@@ -70,26 +106,70 @@ export function LikeReview({ preview, playlistTitle, onCancel, onCompleted }: Pr
         Like {preview.toLike} track{preview.toLike === 1 ? "" : "s"} from "{playlistTitle}" and add
         {preview.toLike === 1 ? " it" : " them"} to Liked Music.
       </p>
-      <p className={quotaIsHigh ? "hint hint--warn" : "hint"}>
-        Estimated YouTube API quota: ~{preview.estimatedQuota.committedUnits} units — your daily limit
-        is 10,000 units.
-      </p>
+      <p className="hint">Two ways to do it — pick whichever suits this playlist.</p>
 
-      <div className="modal__actions">
-        <button className="btn btn--tertiary" onClick={onCancel} disabled={submitting}>
-          Cancel
-        </button>
+      <section className="like-route">
+        <h3 className="like-route__title">Option 1 — Let the app do it</h3>
+        <p className="hint">
+          Precise: it already knows which {preview.alreadyLiked} track
+          {preview.alreadyLiked === 1 ? " is" : "s are"} liked, skips them, and tells you exactly
+          what happened. It costs YouTube API quota, and stops if your daily limit runs out.
+        </p>
+        <p className={quotaIsHigh ? "hint hint--warn" : "hint"}>
+          Estimated YouTube API quota: ~{preview.estimatedQuota.committedUnits} units — your daily
+          limit is 10,000 units.
+        </p>
         <button
-          className="btn btn--primary"
+          className="btn btn--primary like-route__action"
           disabled={submitting || quotaCoolingDown}
           onClick={handleConfirm}
         >
-          {submitting
-            ? "Liking…"
-            : `Like ${preview.toLike} track${preview.toLike === 1 ? "" : "s"}`}
+          {submitting ? "Liking…" : `Like ${preview.toLike} track${preview.toLike === 1 ? "" : "s"}`}
+        </button>
+        {submitting && <Spinner label="Liking tracks…" />}
+      </section>
+
+      <section className="like-route like-route--free">
+        <h3 className="like-route__title">Option 2 — Run a script in your browser (no quota)</h3>
+        <p className="hint">
+          Free — it clicks Like on the YouTube Music page itself, so it uses no API quota at all and
+          can finish a whole large playlist in one go. It takes {roughRuntime(preview.toLike)},
+          needs the YouTube Music tab left open the whole time, and is a little less precise: it
+          likes what it can see on the page rather than a checked list.
+        </p>
+        <ol className="like-route__steps">
+          <li>
+            <a href={playlistUrl} target="_blank" rel="noopener noreferrer">
+              Open "{playlistTitle}" on YouTube Music
+            </a>{" "}
+            in a new tab.
+          </li>
+          <li>Open the browser console (Cmd+Option+J on macOS, F12 on Windows/Linux).</li>
+          <li>Copy the script below and paste it into the console.</li>
+          <li>Press Enter.</li>
+          <li>Leave the tab open until the console logs that it's done.</li>
+        </ol>
+        <div className="like-route__copy">
+          <button className="btn btn--secondary" onClick={handleCopyScript}>
+            {copyState === "copied" ? "Copied!" : "Copy script"}
+          </button>
+          {copyState === "copied" && <span className="hint">Script copied to your clipboard.</span>}
+          {copyState === "failed" && (
+            <span className="hint hint--warn">
+              Your browser blocked the clipboard — select the script below and copy it manually.
+            </span>
+          )}
+        </div>
+        {copyState === "failed" && (
+          <pre className="script-block">{LIKE_ALL_CONSOLE_SCRIPT}</pre>
+        )}
+      </section>
+
+      <div className="modal__actions">
+        <button className="btn btn--tertiary" onClick={onCancel} disabled={submitting}>
+          Close
         </button>
       </div>
-      {submitting && <Spinner label="Liking tracks…" />}
     </div>
   );
 }
