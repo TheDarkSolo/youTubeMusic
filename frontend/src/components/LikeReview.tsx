@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { LikeAllResponse, LikePreviewResponse } from "../api/types";
 import { useErrors } from "../context/ErrorContext";
-import { LIKE_ALL_CONSOLE_SCRIPT } from "../lib/likeAllScript";
+import { buildLikeAllScript } from "../lib/likeAllScript";
 import { Spinner } from "./Spinner";
 
 interface Props {
@@ -39,6 +39,9 @@ export function LikeReview({ preview, playlistTitle, onCancel, onCompleted }: Pr
 
   const quotaIsHigh = preview.estimatedQuota.committedUnits > 7000;
   const playlistUrl = `https://music.youtube.com/playlist?list=${preview.playlistId}`;
+  // Baked into the script so it can refuse to run on a half-loaded page rather than
+  // silently liking only the rows YouTube Music happens to have rendered.
+  const consoleScript = buildLikeAllScript(preview.totalTracks);
 
   // Revert the "Copied!" confirmation on its own; clears if the modal closes first.
   useEffect(() => {
@@ -61,7 +64,7 @@ export function LikeReview({ preview, playlistTitle, onCancel, onCompleted }: Pr
 
   async function handleCopyScript() {
     try {
-      await navigator.clipboard.writeText(LIKE_ALL_CONSOLE_SCRIPT);
+      await navigator.clipboard.writeText(consoleScript);
       setCopyState("copied");
     } catch {
       // Clipboard access can be blocked (permissions, insecure context). Fall back to
@@ -149,6 +152,12 @@ export function LikeReview({ preview, playlistTitle, onCancel, onCompleted }: Pr
           <li>Press Enter.</li>
           <li>Leave the tab open until the console logs that it's done.</li>
         </ol>
+        <p className="hint">
+          You don't need to scroll the playlist first — the script does that itself, and checks
+          that all {preview.totalTracks} tracks loaded before it likes anything. If it stops and
+          says fewer than that are loaded, scroll to the very bottom of the playlist yourself
+          until every row appears, then paste the script again.
+        </p>
         <div className="like-route__copy">
           <button className="btn btn--secondary" onClick={handleCopyScript}>
             {copyState === "copied" ? "Copied!" : "Copy script"}
@@ -161,7 +170,7 @@ export function LikeReview({ preview, playlistTitle, onCancel, onCompleted }: Pr
           )}
         </div>
         {copyState === "failed" && (
-          <pre className="script-block">{LIKE_ALL_CONSOLE_SCRIPT}</pre>
+          <pre className="script-block">{consoleScript}</pre>
         )}
       </section>
 
