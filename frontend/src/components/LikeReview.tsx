@@ -1,15 +1,11 @@
 import { useEffect, useState } from "react";
-import { api } from "../api/client";
-import type { LikeAllResponse, LikePreviewResponse } from "../api/types";
-import { useErrors } from "../context/ErrorContext";
+import type { LikePreviewResponse } from "../api/types";
 import { buildLikeAllScript } from "../lib/likeAllScript";
-import { Spinner } from "./Spinner";
 
 interface Props {
   preview: LikePreviewResponse;
   playlistTitle: string;
   onCancel: () => void;
-  onCompleted: (result: LikeAllResponse) => void;
 }
 
 /** The console script clicks one Like button every 500ms — see likeAllScript.ts. */
@@ -23,21 +19,18 @@ function roughRuntime(trackCount: number): string {
 }
 
 /**
- * §5.13/5.14 — confirm dialog for bulk-liking every not-yet-liked track in a playlist.
- * No plan-token/staleness machinery here (unlike merge/dedupe): like-all is idempotent
- * and re-fetches fresh state at execute time, so there's nothing to go stale.
+ * §5.13 — shows how many tracks a playlist would add to Liked Music, and hands over the
+ * browser-console script that does it.
  *
- * Offers two genuine routes: the API one (precise, costs quota, capped at 10,000 units/day)
- * and a browser-console script the user runs on music.youtube.com themselves (free, no quota,
- * but slower and only as precise as what the page shows). We can't run that script for them —
- * different origin — so we hand it over with a copy button and instructions.
+ * There used to be a second route here that did the liking through the app itself via
+ * `videos.rate` (§5.14). It worked, but at 50 quota units per track a large playlist could
+ * not finish in a day, while the console script does the same job in one pass for free — so
+ * the API route is no longer offered. The endpoint and `api.likeAll` client method are still
+ * in place if it's ever wanted back.
  */
-export function LikeReview({ preview, playlistTitle, onCancel, onCompleted }: Props) {
-  const [submitting, setSubmitting] = useState(false);
+export function LikeReview({ preview, playlistTitle, onCancel }: Props) {
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
-  const { reportError, quotaCoolingDown } = useErrors();
 
-  const quotaIsHigh = preview.estimatedQuota.committedUnits > 7000;
   const playlistUrl = `https://music.youtube.com/playlist?list=${preview.playlistId}`;
   // Baked into the script so it can refuse to run on a half-loaded page rather than
   // silently liking only the rows YouTube Music happens to have rendered.
@@ -49,18 +42,6 @@ export function LikeReview({ preview, playlistTitle, onCancel, onCompleted }: Pr
     const timer = window.setTimeout(() => setCopyState("idle"), 2000);
     return () => window.clearTimeout(timer);
   }, [copyState]);
-
-  async function handleConfirm() {
-    setSubmitting(true);
-    try {
-      const result = await api.likeAll(preview.playlistId);
-      onCompleted(result);
-    } catch (err) {
-      reportError(err);
-    } finally {
-      setSubmitting(false);
-    }
-  }
 
   async function handleCopyScript() {
     try {
@@ -109,36 +90,11 @@ export function LikeReview({ preview, playlistTitle, onCancel, onCompleted }: Pr
         Like {preview.toLike} track{preview.toLike === 1 ? "" : "s"} from "{playlistTitle}" and add
         {preview.toLike === 1 ? " it" : " them"} to Liked Music.
       </p>
-      <p className="hint">Two ways to do it — pick whichever suits this playlist.</p>
-
-      <section className="like-route">
-        <h3 className="like-route__title">Option 1 — Let the app do it</h3>
-        <p className="hint">
-          Precise: it already knows which {preview.alreadyLiked} track
-          {preview.alreadyLiked === 1 ? " is" : "s are"} liked, skips them, and tells you exactly
-          what happened. It costs YouTube API quota, and stops if your daily limit runs out.
-        </p>
-        <p className={quotaIsHigh ? "hint hint--warn" : "hint"}>
-          Estimated YouTube API quota: ~{preview.estimatedQuota.committedUnits} units — your daily
-          limit is 10,000 units.
-        </p>
-        <button
-          className="btn btn--primary like-route__action"
-          disabled={submitting || quotaCoolingDown}
-          onClick={handleConfirm}
-        >
-          {submitting ? "Liking…" : `Like ${preview.toLike} track${preview.toLike === 1 ? "" : "s"}`}
-        </button>
-        {submitting && <Spinner label="Liking tracks…" />}
-      </section>
 
       <section className="like-route like-route--free">
-        <h3 className="like-route__title">Option 2 — Run a script in your browser (no quota)</h3>
         <p className="hint">
-          Free — it clicks Like on the YouTube Music page itself, so it uses no API quota at all and
-          can finish a whole large playlist in one go. It takes {roughRuntime(preview.toLike)},
-          needs the YouTube Music tab left open the whole time, and is a little less precise: it
-          likes what it can see on the page rather than a checked list.
+          This runs in your own browser on the YouTube Music page and takes{" "}
+          {roughRuntime(preview.toLike)}. Leave that tab open while it works.
         </p>
         <ol className="like-route__steps">
           <li>
@@ -159,7 +115,7 @@ export function LikeReview({ preview, playlistTitle, onCancel, onCompleted }: Pr
           until every row appears, then paste the script again.
         </p>
         <div className="like-route__copy">
-          <button className="btn btn--secondary" onClick={handleCopyScript}>
+          <button className="btn btn--primary" onClick={handleCopyScript}>
             {copyState === "copied" ? "Copied!" : "Copy script"}
           </button>
           {copyState === "copied" && <span className="hint">Script copied to your clipboard.</span>}
@@ -169,13 +125,11 @@ export function LikeReview({ preview, playlistTitle, onCancel, onCompleted }: Pr
             </span>
           )}
         </div>
-        {copyState === "failed" && (
-          <pre className="script-block">{consoleScript}</pre>
-        )}
+        {copyState === "failed" && <pre className="script-block">{consoleScript}</pre>}
       </section>
 
       <div className="modal__actions">
-        <button className="btn btn--tertiary" onClick={onCancel} disabled={submitting}>
+        <button className="btn btn--tertiary" onClick={onCancel}>
           Close
         </button>
       </div>

@@ -5,7 +5,6 @@ import type {
   DedupePreviewResponse,
   ExecuteError,
   ExecuteStatus,
-  LikeAllResponse,
   LikePreviewResponse,
   MergeExecuteResponse,
   MergePreviewResponse,
@@ -31,7 +30,6 @@ type Overlay =
   | { kind: "dedupeReview"; preview: DedupePreviewResponse; playlistTitle: string }
   | { kind: "dedupeDone"; result: DedupeExecuteResponse }
   | { kind: "likeReview"; preview: LikePreviewResponse; playlistTitle: string }
-  | { kind: "likeDone"; result: LikeAllResponse }
   | null;
 
 /** §5.15 — human wording for an execute outcome; raw status words are too technical. */
@@ -430,34 +428,10 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
             preview={overlay.preview}
             playlistTitle={overlay.playlistTitle}
             onCancel={() => setOverlay(null)}
-            onCompleted={(result) => setOverlay({ kind: "likeDone", result })}
           />
         </Modal>
       )}
 
-      {overlay?.kind === "likeDone" && (
-        <Modal
-          title={
-            overlay.result.status === "quota_exhausted" ? "Liking stopped early" : "Liked Music updated"
-          }
-          onClose={() => setOverlay(null)}
-        >
-          <p>
-            <strong>{statusLabel(overlay.result.status)}.</strong> Liked {overlay.result.liked} track
-            {overlay.result.liked === 1 ? "" : "s"} ({overlay.result.alreadyLiked} were already liked).
-          </p>
-          <ExecuteOutcome
-            status={overlay.result.status}
-            remaining={overlay.result.remaining}
-            errors={overlay.result.errors}
-          />
-          <div className="modal__actions">
-            <button className="btn btn--primary" onClick={() => setOverlay(null)}>
-              Done
-            </button>
-          </div>
-        </Modal>
-      )}
     </div>
   );
 }
