@@ -92,6 +92,7 @@ export function LikeReview({ preview, playlistTitle, onCancel }: Props) {
       </p>
 
       <section className="like-route like-route--free">
+        <h3 className="like-route__title">Run a script in your browser</h3>
         <p className="hint">
           This runs in your own browser on the YouTube Music page and takes{" "}
           {roughRuntime(preview.toLike)}. Leave that tab open while it works.
