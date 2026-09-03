@@ -9,16 +9,18 @@ interface Props {
 }
 
 /**
- * The console script waits ~500ms after each Like click, and may wait ~250ms on any row whose
- * controls YouTube Music hasn't rendered yet — and it walks every row, not just the unliked
- * ones. See likeAllScript.ts. Rows that are already rendered cost nothing, so this is an
- * upper bound rather than a precise figure.
+ * The console script waits ~400ms after each Like click, and sweeps the whole list at least
+ * twice (the second, empty sweep is how it knows it's finished) — see likeAllScript.ts.
+ * Scrolling cost is rough: roughly a screenful of rows per 0.6s of scrolling.
  */
-const SECONDS_PER_LIKE = 0.5;
-const SECONDS_PER_ROW_SCROLL = 0.25;
+const SECONDS_PER_LIKE = 0.4;
+const SECONDS_PER_SWEEP_ROW = 0.03;
+const SWEEPS = 2;
 
 function roughRuntime(toLike: number, totalTracks: number): string {
-  const seconds = Math.round(toLike * SECONDS_PER_LIKE + totalTracks * SECONDS_PER_ROW_SCROLL);
+  const seconds = Math.round(
+    toLike * SECONDS_PER_LIKE + totalTracks * SECONDS_PER_SWEEP_ROW * SWEEPS,
+  );
   if (seconds < 90) return `up to about ${seconds} seconds`;
   const minutes = Math.round(seconds / 60);
   return `up to about ${minutes} minute${minutes === 1 ? "" : "s"}`;
@@ -116,10 +118,9 @@ export function LikeReview({ preview, playlistTitle, onCancel }: Props) {
           <li>Leave the tab open until the console logs that it's done.</li>
         </ol>
         <p className="hint">
-          You don't need to scroll the playlist first — the script does that itself, and checks
-          that all {preview.totalTracks} tracks loaded before it likes anything. If it stops and
-          says fewer than that are loaded, scroll to the very bottom of the playlist yourself
-          until every row appears, then paste the script again.
+          You don't need to scroll the playlist first — the script scrolls through it itself,
+          liking as it goes, and then sweeps the whole list again to catch anything it missed.
+          It stops once a full pass finds nothing left to like, and prints how many it liked.
         </p>
         <div className="like-route__copy">
           <button className="btn btn--primary" onClick={handleCopyScript}>
