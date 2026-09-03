@@ -24,6 +24,11 @@
  * 3. **Scoped to the playlist shelf.** The original's own caveat was that it could
  *    accidentally like the recommendation rows YouTube appends below the playlist. This
  *    restricts the search to the playlist's own container when it can find it.
+ * 4. **Row-by-row instead of one big querySelectorAll.** Having all the rows in the DOM is
+ *    not enough: YouTube Music only fills in a row's controls when it is near the viewport,
+ *    so collecting Like buttons up front finds only the last screenful. Observed live on a
+ *    793-row playlist: 16 buttons found, 16 liked, "done" — while hundreds of tracks were
+ *    silently skipped. Each row is now scrolled into view if its Like control is missing.
  *
  * Built as a string rather than a real module: it never executes in this app (it can't —
  * different origin), it's only ever copied to the clipboard for the user to paste into the
@@ -37,11 +42,10 @@ export function buildLikeAllScript(expectedTracks: number): string {
   const EXPECTED_TRACKS = ${Math.max(0, Math.floor(expectedTracks))};
   const CLICK_DELAY_MS = 500;   // raise if YouTube Music starts missing clicks
   const SCROLL_DELAY_MS = 700;
+  const HYDRATE_DELAY_MS = 250; // time for a row's controls to appear once scrolled into view
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   const rowSelector = 'ytmusic-responsive-list-item-renderer';
-  const likeSelector =
-    'ytmusic-like-button-renderer[like-status="INDIFFERENT"] button[aria-label="Like"][aria-pressed="false"]';
 
   // Playlist tracks live in the shelf; recommendations sit outside it. Scope to the shelf so
   // we never like a suggestion by accident. Fall back to the whole page if the layout differs.
@@ -83,18 +87,45 @@ export function buildLikeAllScript(expectedTracks: number): string {
     return;
   }
 
-  // 3. Like everything not already liked, bottom-up so the list does not shift under us.
-  const buttons = Array.from(scope.querySelectorAll(likeSelector)).reverse();
-  console.log('Found ' + buttons.length + ' tracks to like. Keep this tab open.');
+  // 3. Walk the rows in order, liking as we go.
+  //
+  //    Deliberately NOT "collect every Like button, then click them all": all the rows are in
+  //    the DOM after the scroll, but YouTube Music only fills in a row's controls when it is
+  //    near the viewport. One up-front querySelectorAll therefore finds just the last
+  //    screenful (observed: 16 buttons out of a 793-row playlist) and reports success while
+  //    skipping hundreds of tracks. So each row is brought into view if its Like control has
+  //    not been rendered yet, and re-queried by index in case rows get recycled.
+  console.log('Going through ' + loaded + ' tracks. Keep this tab open.');
 
-  for (let i = 0; i < buttons.length; i++) {
-    buttons[i].click();
-    if ((i + 1) % 10 === 0 || i === buttons.length - 1) {
-      console.log('Liked ' + (i + 1) + '/' + buttons.length);
+  let liked = 0;
+  let alreadyLiked = 0;
+  let unreadable = 0;
+
+  for (let i = 0; i < loaded; i++) {
+    let row = scope.querySelectorAll(rowSelector)[i];
+    if (!row) { unreadable++; continue; }
+
+    let renderer = row.querySelector('ytmusic-like-button-renderer');
+    if (!renderer) {
+      row.scrollIntoView({ block: 'center' });
+      await sleep(HYDRATE_DELAY_MS);
+      row = scope.querySelectorAll(rowSelector)[i];
+      renderer = row && row.querySelector('ytmusic-like-button-renderer');
     }
+    if (!renderer) { unreadable++; continue; }
+
+    if (renderer.getAttribute('like-status') === 'LIKE') { alreadyLiked++; continue; }
+
+    const btn = renderer.querySelector('button[aria-label="Like"]');
+    if (!btn) { unreadable++; continue; }
+
+    btn.click();
+    liked++;
+    if (liked % 10 === 0) console.log('  liked ' + liked + ' so far (row ' + (i + 1) + '/' + loaded + ')');
     await sleep(CLICK_DELAY_MS);
   }
 
-  console.log('Finished! ' + buttons.length + ' track' + (buttons.length === 1 ? '' : 's') + ' liked. Enjoy 🎵');
+  console.log('Finished! ' + liked + ' track' + (liked === 1 ? '' : 's') + ' liked. Enjoy 🎵');
+  console.log('(' + alreadyLiked + ' were already liked' + (unreadable ? ', ' + unreadable + ' could not be read' : '') + '.)');
 })();`;
 }

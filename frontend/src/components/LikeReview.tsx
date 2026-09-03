@@ -8,14 +8,20 @@ interface Props {
   onCancel: () => void;
 }
 
-/** The console script clicks one Like button every 500ms — see likeAllScript.ts. */
-const SCRIPT_SECONDS_PER_TRACK = 0.5;
+/**
+ * The console script waits ~500ms after each Like click, and may wait ~250ms on any row whose
+ * controls YouTube Music hasn't rendered yet — and it walks every row, not just the unliked
+ * ones. See likeAllScript.ts. Rows that are already rendered cost nothing, so this is an
+ * upper bound rather than a precise figure.
+ */
+const SECONDS_PER_LIKE = 0.5;
+const SECONDS_PER_ROW_SCROLL = 0.25;
 
-function roughRuntime(trackCount: number): string {
-  const seconds = Math.round(trackCount * SCRIPT_SECONDS_PER_TRACK);
-  if (seconds < 90) return `about ${seconds} seconds`;
+function roughRuntime(toLike: number, totalTracks: number): string {
+  const seconds = Math.round(toLike * SECONDS_PER_LIKE + totalTracks * SECONDS_PER_ROW_SCROLL);
+  if (seconds < 90) return `up to about ${seconds} seconds`;
   const minutes = Math.round(seconds / 60);
-  return `about ${minutes} minute${minutes === 1 ? "" : "s"}`;
+  return `up to about ${minutes} minute${minutes === 1 ? "" : "s"}`;
 }
 
 /**
@@ -95,7 +101,7 @@ export function LikeReview({ preview, playlistTitle, onCancel }: Props) {
         <h3 className="like-route__title">Run a script in your browser</h3>
         <p className="hint">
           This runs in your own browser on the YouTube Music page and takes{" "}
-          {roughRuntime(preview.toLike)}. Leave that tab open while it works.
+          {roughRuntime(preview.toLike, preview.totalTracks)}. Leave that tab open while it works.
         </p>
         <ol className="like-route__steps">
           <li>
