@@ -171,12 +171,7 @@ export function DedupeReview({ preview, playlistTitle, onCancel, onCompleted }: 
                 checked={allPossibleConfirmed}
                 onChange={toggleAllPossible}
               />
-              <strong>Select all possible duplicates</strong>
-              <span className="muted">
-                {" "}
-                — these are fuzzy title/channel matches, not exact — check the pairs below before
-                confirming all of them.
-              </span>
+              <strong>Select all</strong>
             </label>
             <ul className="checkbox-list">
               {livePreview.removals.possibleDuplicates.map((g) => (
