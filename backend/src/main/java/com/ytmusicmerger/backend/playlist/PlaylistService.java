@@ -91,6 +91,20 @@ public class PlaylistService {
         return new PlaylistsResponse(playlistDtos, groupDtos);
     }
 
+    /** §5.17 - lightweight id/title/itemCount for all owned playlists, no duplicate-group
+     * annotation (that's §5.5's separate name-similarity concept via {@link #listPlaylistsWithDuplicates()}). */
+    public List<PlaylistMeta> fetchOwnPlaylistMeta() {
+        List<Playlist> raw = fetchAllOwnPlaylists(client());
+        List<PlaylistMeta> result = new ArrayList<>();
+        for (Playlist p : raw) {
+            String title = p.getSnippet() != null ? p.getSnippet().getTitle() : "";
+            long itemCount = p.getContentDetails() != null && p.getContentDetails().getItemCount() != null
+                    ? p.getContentDetails().getItemCount() : 0L;
+            result.add(new PlaylistMeta(p.getId(), title, itemCount));
+        }
+        return result;
+    }
+
     /** §5.6 - a single page of a playlist's tracks. */
     public TracksResponse listTracksPage(String playlistId, String pageToken) {
         try {
@@ -325,6 +339,89 @@ public class PlaylistService {
             throw new ApiException(ErrorCode.INTERNAL_ERROR, "Failed to fetch like status from YouTube.");
         }
         return liked;
+    }
+
+    /**
+     * §5.16 step 2: batched {@code videos.list(part=snippet)} - resolves {@code categoryId},
+     * {@code title} and {@code channelTitle} for a set of (unique) video ids, chunked 50 at a
+     * time same as {@link #fetchPlaylistMeta}. Videos that no longer exist (deleted/private)
+     * are simply absent from the result; callers fall back to whatever playlistItem data they
+     * already have for those.
+     */
+    public List<VideoMetaRecord> fetchVideoMeta(List<String> videoIds) {
+        if (videoIds.isEmpty()) {
+            return List.of();
+        }
+        YouTube youTube = client();
+        List<VideoMetaRecord> result = new ArrayList<>();
+        int chunkSize = 50;
+        try {
+            for (int i = 0; i < videoIds.size(); i += chunkSize) {
+                List<String> chunk = videoIds.subList(i, Math.min(i + chunkSize, videoIds.size()));
+                VideoListResponse response = youTube.videos()
+                        .list(List.of("snippet"))
+                        .setId(chunk)
+                        .setMaxResults((long) chunkSize)
+                        .execute();
+                if (response.getItems() != null) {
+                    for (Video v : response.getItems()) {
+                        VideoSnippet snippet = v.getSnippet();
+                        String title = snippet != null ? snippet.getTitle() : "";
+                        String channelTitle = snippet != null ? snippet.getChannelTitle() : null;
+                        String categoryId = snippet != null ? snippet.getCategoryId() : null;
+                        result.add(new VideoMetaRecord(v.getId(), title, channelTitle, categoryId));
+                    }
+                }
+            }
+        } catch (IOException e) {
+            if (e instanceof GoogleJsonResponseException gje) {
+                throw GoogleApiErrorTranslator.translate(gje);
+            }
+            throw new ApiException(ErrorCode.INTERNAL_ERROR, "Failed to fetch video metadata from YouTube.");
+        }
+        return result;
+    }
+
+    // §5.16 step 3: videoCategories.list is called once and cached for the process lifetime
+    // (this @Service is a Spring singleton, so "process lifetime" == this field's lifetime).
+    private volatile Map<String, String> categoryNameCache;
+
+    /** §5.16 step 3: {@code videoCategories.list(part=snippet, regionCode="US")} -> id -> name. */
+    public Map<String, String> fetchVideoCategoryNames() {
+        Map<String, String> cached = categoryNameCache;
+        if (cached != null) {
+            return cached;
+        }
+        synchronized (this) {
+            if (categoryNameCache != null) {
+                return categoryNameCache;
+            }
+            try {
+                VideoCategoryListResponse response = client().videoCategories()
+                        .list(List.of("snippet"))
+                        .setRegionCode("US")
+                        .execute();
+                Map<String, String> names = new HashMap<>();
+                if (response.getItems() != null) {
+                    for (VideoCategory c : response.getItems()) {
+                        String name = c.getSnippet() != null ? c.getSnippet().getTitle() : c.getId();
+                        names.put(c.getId(), name);
+                    }
+                }
+                categoryNameCache = names;
+                return names;
+            } catch (IOException e) {
+                if (e instanceof GoogleJsonResponseException gje) {
+                    throw GoogleApiErrorTranslator.translate(gje);
+                }
+                throw new ApiException(ErrorCode.INTERNAL_ERROR, "Failed to fetch video category names from YouTube.");
+            }
+        }
+    }
+
+    /** §5.16 - {@code videos.rate(id, "none")}, i.e. un-like a single video. */
+    public void unlikeVideo(String videoId) throws IOException {
+        client().videos().rate(videoId, "none").execute();
     }
 
     private List<Playlist> fetchAllOwnPlaylists(YouTube youTube) {
