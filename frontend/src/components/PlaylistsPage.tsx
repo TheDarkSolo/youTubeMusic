@@ -285,7 +285,10 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
       <header className="page__header">
         <div className="page__brand">
           <Logo />
-          <h1>YT Music Manager</h1>
+          <div>
+            <h1>YT Music Manager</h1>
+            <p className="page__brand-tagline">Merge duplicate playlists, clean up duplicate tracks</p>
+          </div>
         </div>
         <div className="page__header-actions">
           <button

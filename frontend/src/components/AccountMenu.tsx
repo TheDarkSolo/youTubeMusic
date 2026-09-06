@@ -5,6 +5,43 @@ interface Props {
   onLogout: () => void;
 }
 
+function CaretIcon() {
+  return (
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 16 16"
+      fill="none"
+      className="account-menu__caret"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M3.5 6l4.5 4.5L12.5 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function LogoutIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
+      <path
+        d="M6.5 2.5H3.6c-.6 0-1.1.5-1.1 1.1v8.8c0 .6.5 1.1 1.1 1.1h2.9"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M10.2 5.2l3 2.8-3 2.8M13 8H6"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 /**
  * The "who am I / sign out" corner of the app. Single-account tool (see docs/ARCHITECTURE.md —
  * no multi-user auth), so this is deliberately just an avatar + name that opens a small menu
@@ -59,6 +96,7 @@ export function AccountMenu({ channelTitle, onLogout }: Props) {
           {initial}
         </span>
         <span className="account-menu__name">{channelTitle ?? "Signed in"}</span>
+        <CaretIcon />
       </button>
       {open && (
         <div className="account-menu__dropdown" role="menu">
@@ -68,6 +106,7 @@ export function AccountMenu({ channelTitle, onLogout }: Props) {
             role="menuitem"
             onClick={handleLogoutClick}
           >
+            <LogoutIcon />
             Log out
           </button>
         </div>

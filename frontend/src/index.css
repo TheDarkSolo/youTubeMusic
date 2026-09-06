@@ -13,13 +13,22 @@
   --danger: #e5484d;
   --danger-hover: #cc3f44;
   --warn: #e6a23c;
+  /* Soft warn fill, sibling of --accent-soft — same job (a colored chip's background,
+     with --warn itself as the foreground text) for the fuzzy-match badge. */
+  --warn-soft: rgba(230, 162, 60, 0.14);
   /* Foreground for text/icons sitting on top of an --accent or --warn *background*
      (badges, .btn--primary) — a distinct concern from using accent/warn themselves as
      foreground color (links, icon fills), which already holds AA contrast on both
      themes' surface colors without help. */
   --on-accent: #0b0d12;
-  --radius: 8px;
-  --radius-sm: 6px;
+  /* Calm, DeepSeek-inspired surfaces: soft rounded corners rather than sharp or pill-heavy,
+     and restrained elevation — shadows are reserved for things that float above the page
+     (modals, dropdowns, the sticky select bar, toasts), everything else reads through a
+     hairline border instead. */
+  --radius: 14px;
+  --radius-sm: 8px;
+  --shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.28);
+  --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.4);
   color-scheme: dark;
 }
 
@@ -42,10 +51,15 @@
   --danger: #c8393a;
   --danger-hover: #ad2f30;
   --warn: #9a6300;
+  --warn-soft: rgba(154, 99, 0, 0.12);
   /* Both --accent and --warn are darker/more saturated here than in dark mode (see above),
      so #0b0d12-on-accent (the dark-mode badge/.btn--primary text) drops to ~3.6:1 — under
      AA. White text clears ~5:1 on both. */
   --on-accent: #ffffff;
+  /* Shadows read as a heavy gray smudge on a light background at dark-mode strength —
+     lighter and tighter here, same shape. */
+  --shadow-sm: 0 4px 14px rgba(20, 22, 26, 0.1);
+  --shadow-md: 0 16px 32px rgba(20, 22, 26, 0.16);
   color-scheme: light;
 }
 
@@ -56,8 +70,11 @@
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
   background: var(--bg);
   color: var(--text);
+  -webkit-font-smoothing: antialiased;
 }
 
 h1,
@@ -69,20 +86,21 @@ h3 {
 }
 
 h1 {
-  font-size: 1.5rem;
+  font-size: 1.4rem;
+  letter-spacing: -0.02em;
 }
 
 h2 {
-  font-size: 1.05rem;
+  font-size: 0.72rem;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  font-weight: 600;
-  margin-bottom: 0.75em;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  margin-bottom: 1em;
 }
 
 h3 {
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 
 .muted {
@@ -126,30 +144,31 @@ h3 {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 36px 32px 32px;
+  padding: 40px 36px 36px;
   display: flex;
   flex-direction: column;
   align-items: center;
+  box-shadow: var(--shadow-sm);
 }
 
 .login-card__logo {
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 
 .login-card h1 {
-  margin-bottom: 0.4em;
+  margin-bottom: 0.5em;
 }
 
 .login-card p {
   color: var(--text-muted);
-  margin: 0 0 20px;
-  line-height: 1.5;
+  margin: 0 0 24px;
+  line-height: 1.55;
 }
 
 .page {
-  max-width: 1100px;
+  max-width: 1120px;
   margin: 0 auto;
-  padding: 24px 20px 80px;
+  padding: 36px 24px 96px;
 }
 
 .page__header {
@@ -157,26 +176,35 @@ h3 {
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 28px;
-  padding-bottom: 20px;
+  gap: 16px;
+  margin-bottom: 40px;
+  padding-bottom: 24px;
   border-bottom: 1px solid var(--border);
 }
 
 .page__brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 
 .page__brand h1 {
   margin: 0;
+  line-height: 1.2;
+}
+
+/* Short descriptor under the wordmark — reads as one calm, two-line brand block rather than
+   a bare title, in keeping with the rest of the header's more spacious treatment. */
+.page__brand-tagline {
+  margin: 2px 0 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
 }
 
 .page__header-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 /* Two clusters of header buttons: library-wide actions (audit, scan — heavier, less
@@ -185,8 +213,9 @@ h3 {
 .page__header-actions-group {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding-left: 10px;
+  gap: 8px;
+  padding-left: 12px;
+  margin-left: 4px;
   border-left: 1px solid var(--border);
 }
 
@@ -204,9 +233,8 @@ h3 {
   align-items: center;
 }
 
-/* Account menu — avatar + name trigger with a small dropdown. Kept structurally solid
-   (see AccountMenu.tsx: click-outside, Escape, ARIA menu roles) even though this visual
-   treatment is expected to be revisited in an upcoming redesign pass. */
+/* Account menu — avatar + name trigger with a small dropdown (see AccountMenu.tsx:
+   click-outside, Escape, ARIA menu roles). */
 .account-menu {
   position: relative;
 }
@@ -215,7 +243,7 @@ h3 {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 10px 4px 4px;
+  padding: 4px 12px 4px 4px;
   background: transparent;
   border: 1px solid transparent;
   border-radius: 999px;
@@ -229,7 +257,7 @@ h3 {
 
 .account-menu__trigger:hover,
 .account-menu__trigger[aria-expanded="true"] {
-  background: var(--surface-hover);
+  background: var(--surface-alt);
   border-color: var(--border);
 }
 
@@ -237,12 +265,12 @@ h3 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: var(--accent);
   color: var(--on-accent);
-  font-size: 0.8em;
+  font-size: 0.78em;
   font-weight: 700;
   flex-shrink: 0;
 }
@@ -254,21 +282,33 @@ h3 {
   white-space: nowrap;
 }
 
+.account-menu__caret {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.account-menu__trigger[aria-expanded="true"] .account-menu__caret {
+  transform: rotate(180deg);
+}
+
 .account-menu__dropdown {
   position: absolute;
-  top: calc(100% + 6px);
+  top: calc(100% + 8px);
   right: 0;
-  min-width: 160px;
+  min-width: 170px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow-md);
   padding: 6px;
   z-index: 60;
 }
 
 .account-menu__item {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   width: 100%;
   text-align: left;
   padding: 8px 10px;
@@ -281,16 +321,17 @@ h3 {
   cursor: pointer;
 }
 
+.account-menu__item svg {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
 .account-menu__item:hover {
   background: var(--surface-hover);
 }
 
-:root[data-theme="light"] .account-menu__dropdown {
-  box-shadow: 0 8px 24px rgba(20, 22, 26, 0.16);
-}
-
 section {
-  margin-bottom: 36px;
+  margin-bottom: 44px;
 }
 
 .playlist-grid {
@@ -303,12 +344,16 @@ section {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 12px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   height: 100%;
   transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.playlist-card:hover {
+  border-color: var(--border-strong);
 }
 
 .playlist-card__thumb {
@@ -316,7 +361,7 @@ section {
   height: auto;
   aspect-ratio: 4 / 3;
   object-fit: cover;
-  border-radius: 5px;
+  border-radius: calc(var(--radius) - 6px);
   background: var(--surface-alt);
 }
 
@@ -329,8 +374,8 @@ section {
 
 .playlist-card__title {
   font-weight: 600;
-  line-height: 1.3;
-  min-height: calc(1.3em * 2);
+  line-height: 1.35;
+  min-height: calc(1.35em * 2);
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -348,7 +393,7 @@ section {
   flex-direction: column;
   gap: 8px;
   margin-top: auto;
-  padding-top: 4px;
+  padding-top: 6px;
 }
 
 /* Custom tooltip - shows immediately on hover/focus, unlike the browser's
@@ -379,7 +424,7 @@ section {
   font-weight: 400;
   line-height: 1.4;
   text-align: left;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow-md);
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -421,22 +466,26 @@ section {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 16px;
-  margin-top: 20px;
+  padding: 12px 18px;
+  margin-top: 24px;
   background: var(--surface);
-  border: 1px solid var(--accent);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow-md);
   z-index: 800;
   font-size: 0.9em;
 }
 
+/* Possible-duplicate group: a plain card (not a full accent wash) with a slim accent rail on
+   the leading edge — enough to read as "flagged" without turning the whole card into a block
+   of saturated color. The match-type badge below carries the rest of that signal. */
 .dup-group {
-  border: 1px solid var(--accent);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
   border-radius: var(--radius);
-  padding: 18px;
-  margin-bottom: 16px;
-  background: var(--accent-soft);
+  padding: 20px;
+  margin-bottom: 20px;
+  background: var(--surface);
 }
 
 .dup-group__header {
@@ -445,7 +494,7 @@ section {
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .dup-group__members {
@@ -454,33 +503,38 @@ section {
   gap: 16px;
 }
 
+/* Soft chip: tinted background + colored text rather than a solid fill, so badges read as
+   quiet metadata instead of competing with primary buttons for attention. */
 .badge {
   display: inline-block;
-  padding: 4px 12px;
+  padding: 4px 11px;
   border-radius: 999px;
-  font-size: 0.78em;
+  font-size: 0.76em;
   font-weight: 700;
   letter-spacing: 0.01em;
-  background: var(--accent);
-  color: var(--on-accent);
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 .badge--fuzzy {
-  background: var(--warn);
+  background: var(--warn-soft);
+  color: var(--warn);
 }
 
 .badge--exact {
-  background: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 .btn {
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
-  padding: 8px 16px;
-  font-size: 0.9em;
+  padding: 9px 18px;
+  font-size: 0.87em;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease,
+    box-shadow 0.15s ease;
 }
 
 .btn:active:not(:disabled) {
@@ -498,8 +552,8 @@ section {
 }
 
 .btn--small {
-  padding: 6px 12px;
-  font-size: 0.82em;
+  padding: 7px 14px;
+  font-size: 0.8em;
 }
 
 .btn--primary {
@@ -509,6 +563,7 @@ section {
 
 .btn--primary:not(:disabled):hover {
   background: var(--accent-hover);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn--secondary {
@@ -529,6 +584,7 @@ section {
 }
 
 .btn--tertiary:not(:disabled):hover {
+  background: var(--surface-alt);
   color: var(--text);
   border-color: var(--border-strong);
 }
@@ -540,6 +596,7 @@ section {
 
 .btn--danger:not(:disabled):hover {
   background: var(--danger-hover);
+  box-shadow: var(--shadow-sm);
 }
 
 /* Action-button set on playlist cards (dedupe / like / delete): every button
@@ -601,8 +658,8 @@ section {
   justify-content: space-between;
   gap: 12px;
   padding: 12px 14px;
-  border-radius: var(--radius);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
 }
 
 .banner--error {
@@ -625,17 +682,6 @@ section {
 :root[data-theme="light"] .banner--warn {
   background: #fbf1de;
   color: #5c3e00;
-}
-
-/* Elevation shadows tuned for the dark theme (rgba(0,0,0,0.4)) read as a heavy gray smudge
-   on a white/near-white background — lighten and tighten them here rather than restyling
-   the whole box-shadow system. */
-:root[data-theme="light"] .tooltip-bubble {
-  box-shadow: 0 6px 18px rgba(20, 22, 26, 0.14);
-}
-
-:root[data-theme="light"] .select-bar {
-  box-shadow: 0 8px 24px rgba(20, 22, 26, 0.16);
 }
 
 .banner__message {
@@ -680,11 +726,13 @@ section {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(10, 12, 16, 0.55);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 40px 16px;
+  padding: 48px 16px;
   z-index: 900;
   overflow-y: auto;
 }
@@ -695,7 +743,8 @@ section {
   border-radius: var(--radius);
   width: 100%;
   max-width: 480px;
-  padding: 20px;
+  padding: 24px;
+  box-shadow: var(--shadow-md);
 }
 
 .modal--wide {
@@ -706,23 +755,48 @@ section {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal__header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--text);
+  text-transform: none;
+  letter-spacing: -0.01em;
+  font-weight: 700;
 }
 
 .modal__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
   background: none;
   border: none;
+  border-radius: 50%;
   color: var(--text-muted);
-  font-size: 1.4em;
+  font-size: 1.3em;
   cursor: pointer;
   line-height: 1;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.modal__close:hover {
+  background: var(--surface-alt);
+  color: var(--text);
 }
 
 .modal__actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  margin-top: 16px;
+  margin-top: 20px;
 }
 
 /* Forms */
@@ -748,9 +822,9 @@ section {
   gap: 8px;
   padding: 10px 12px;
   margin-bottom: 10px;
-  background: var(--surface-hover, rgba(255, 255, 255, 0.04));
-  border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.12));
-  border-radius: var(--radius-sm, 6px);
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   font-size: 0.92em;
 }
 
@@ -792,12 +866,21 @@ section {
 .select,
 .text-input {
   width: 100%;
-  padding: 8px 10px;
+  padding: 9px 12px;
   background: var(--surface-alt);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   color: var(--text);
+  font: inherit;
   margin-bottom: 8px;
+  transition: border-color 0.15s ease;
+}
+
+.select:focus-visible,
+.text-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: var(--accent);
 }
 
 .plain-list {
@@ -844,9 +927,9 @@ section {
 
 .summary-line {
   font-weight: 600;
-  padding: 12px;
+  padding: 14px 16px;
   background: var(--surface-alt);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border);
 }
 
@@ -864,9 +947,9 @@ section {
 .like-review__stat {
   flex: 1;
   text-align: center;
-  padding: 10px 8px;
+  padding: 12px 8px;
   background: var(--accent-soft);
-  border: 1px solid var(--accent);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
 }
 
@@ -900,13 +983,13 @@ section {
    runs themselves (free). Each gets its own bordered panel so they read as two equal
    choices rather than one action with a footnote. */
 .like-route {
-  /* Explicit bottom margin: these are <section>s, and the global `section` rule's 36px
-     bottom margin is page rhythm, far too loose inside a modal. */
-  margin: 14px 0 0;
-  padding: 14px;
+  /* Explicit bottom margin: these are <section>s, and the global `section` rule's page-rhythm
+     margin is far too loose inside a modal. */
+  margin: 16px 0 0;
+  padding: 16px;
   background: var(--surface-alt);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius);
 }
 
 .like-route__title {
@@ -960,10 +1043,10 @@ section {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   background: var(--surface-alt);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm, 6px);
+  border-radius: var(--radius-sm);
 }
 
 .library-scan__info {
