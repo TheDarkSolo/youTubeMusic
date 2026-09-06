@@ -44,9 +44,9 @@ function LogoutIcon() {
 
 /**
  * The "who am I / sign out" corner of the app. Single-account tool (see docs/ARCHITECTURE.md —
- * no multi-user auth), so this is deliberately just a name that opens a small menu with one
- * action — not an account switcher. Built as a real menu (open/close state, click-outside,
- * Escape, ARIA menu semantics) rather than a one-off dropdown.
+ * no multi-user auth), so this is deliberately just an avatar + first name that opens a small
+ * menu with one action — not an account switcher. Built as a real menu (open/close state,
+ * click-outside, Escape, ARIA menu semantics) rather than a one-off dropdown.
  */
 export function AccountMenu({ channelTitle, onLogout }: Props) {
   const [open, setOpen] = useState(false);
@@ -80,6 +80,9 @@ export function AccountMenu({ channelTitle, onLogout }: Props) {
     onLogout();
   }
 
+  const firstName = channelTitle?.trim().split(/\s+/)[0];
+  const initial = firstName ? firstName.charAt(0).toUpperCase() : "?";
+
   return (
     <div className="account-menu" ref={rootRef}>
       <button
@@ -89,7 +92,10 @@ export function AccountMenu({ channelTitle, onLogout }: Props) {
         aria-expanded={open}
         onClick={() => setOpen((prev) => !prev)}
       >
-        <span className="account-menu__name">{channelTitle ?? "Signed in"}</span>
+        <span className="account-menu__avatar" aria-hidden="true">
+          {initial}
+        </span>
+        <span className="account-menu__name">{firstName ?? "Signed in"}</span>
         <CaretIcon />
       </button>
       {open && (

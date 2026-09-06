@@ -318,11 +318,11 @@ h3 {
 .account-menu__trigger {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
+  gap: 8px;
+  padding: 4px 12px 4px 4px;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: var(--radius-sm);
+  border-radius: 999px;
   color: var(--text);
   font: inherit;
   font-size: 0.85em;
@@ -337,8 +337,22 @@ h3 {
   border-color: var(--border);
 }
 
+.account-menu__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 0.78em;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
 .account-menu__name {
-  max-width: 160px;
+  max-width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
