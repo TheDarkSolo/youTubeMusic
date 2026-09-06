@@ -227,23 +227,27 @@ export function MergeReview({ preview, sourcePlaylistIds, target, onCancel, onCo
       </section>
 
       <section>
-        <h3>
-          Possible duplicates ({livePreview.plannedRemovals.possibleDuplicates.length} group
-          {livePreview.plannedRemovals.possibleDuplicates.length === 1 ? "" : "s"})
-        </h3>
-        {livePreview.plannedRemovals.possibleDuplicates.length === 0 ? (
-          <p className="hint">No possible duplicates found.</p>
-        ) : (
-          <>
-            <label className="select-all-row">
+        <div className="section-header">
+          <h3>
+            Possible duplicates ({livePreview.plannedRemovals.possibleDuplicates.length} group
+            {livePreview.plannedRemovals.possibleDuplicates.length === 1 ? "" : "s"})
+          </h3>
+          {livePreview.plannedRemovals.possibleDuplicates.length > 0 && (
+            <label className="select-all-inline">
               <input
                 ref={selectAllPossibleRef}
                 type="checkbox"
                 checked={allPossibleConfirmed}
                 onChange={toggleAllPossible}
               />
-              <strong>Select all</strong>
+              Select all
             </label>
+          )}
+        </div>
+        {livePreview.plannedRemovals.possibleDuplicates.length === 0 ? (
+          <p className="hint">No possible duplicates found.</p>
+        ) : (
+          <>
             <ul className="checkbox-list">
               {livePreview.plannedRemovals.possibleDuplicates.map((g) => (
                 <li key={g.groupId}>

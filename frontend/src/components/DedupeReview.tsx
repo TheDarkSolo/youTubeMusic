@@ -156,23 +156,27 @@ export function DedupeReview({ preview, playlistTitle, onCancel, onCompleted }: 
       </section>
 
       <section>
-        <h3>
-          Possible duplicates ({livePreview.removals.possibleDuplicates.length} group
-          {livePreview.removals.possibleDuplicates.length === 1 ? "" : "s"})
-        </h3>
-        {livePreview.removals.possibleDuplicates.length === 0 ? (
-          <p className="hint">No possible duplicates found.</p>
-        ) : (
-          <>
-            <label className="select-all-row">
+        <div className="section-header">
+          <h3>
+            Possible duplicates ({livePreview.removals.possibleDuplicates.length} group
+            {livePreview.removals.possibleDuplicates.length === 1 ? "" : "s"})
+          </h3>
+          {livePreview.removals.possibleDuplicates.length > 0 && (
+            <label className="select-all-inline">
               <input
                 ref={selectAllPossibleRef}
                 type="checkbox"
                 checked={allPossibleConfirmed}
                 onChange={toggleAllPossible}
               />
-              <strong>Select all</strong>
+              Select all
             </label>
+          )}
+        </div>
+        {livePreview.removals.possibleDuplicates.length === 0 ? (
+          <p className="hint">No possible duplicates found.</p>
+        ) : (
+          <>
             <ul className="checkbox-list">
               {livePreview.removals.possibleDuplicates.map((g) => (
                 <li key={g.groupId}>

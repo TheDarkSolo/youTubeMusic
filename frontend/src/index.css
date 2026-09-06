@@ -603,6 +603,31 @@ section {
   margin-top: 2px;
 }
 
+/* Section heading + its "select all" on one line, instead of a separate boxed row below it
+   (used for the possible-duplicates sections in MergeReview/DedupeReview, where the fuzzy-match
+   caveat is already obvious from the rows themselves so a heavier callout box is unwarranted). */
+.section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.section-header h3 {
+  margin: 0;
+}
+
+.select-all-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82em;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
 .radio-row {
   display: flex;
   align-items: center;
