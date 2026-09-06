@@ -60,7 +60,7 @@ public class DedupePlanService {
                                 i.videoId(), i.title(), i.channelTitle())).toList()))
                 .toList();
 
-        int exactDuplicatesToRemove = removalPlan.exact().stream().mapToInt(g -> g.remove().size()).sum();
+        int exactDuplicatesToRemove = removalPlan.exactDuplicateCount();
         DedupeSummaryDto summary = new DedupeSummaryDto(exactDuplicatesToRemove, possibleDtos.size());
 
         Map<String, RemovalPlanBuilder.PossibleGroupPlan> possibleById = removalPlan.possible().stream()

@@ -32,6 +32,17 @@ public class RemovalPlanBuilder {
     }
 
     public record RemovalPlan(List<ExactGroupPlan> exact, List<PossibleGroupPlan> possible) {
+
+        /**
+         * Total items an exact-duplicate cleanup would remove (one "keep" survives per group,
+         * everything else in {@code remove()} counts). The single formula behind both
+         * {@code DedupePlanService}'s preview summary and {@code LibraryDuplicateScanService}'s
+         * per-playlist scan count - kept here, not duplicated in each caller, so the two can
+         * never quietly disagree on the same playlist's duplicate count.
+         */
+        public int exactDuplicateCount() {
+            return exact.stream().mapToInt(g -> g.remove().size()).sum();
+        }
     }
 
     /**

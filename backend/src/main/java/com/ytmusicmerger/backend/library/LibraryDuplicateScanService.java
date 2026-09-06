@@ -39,8 +39,7 @@ public class LibraryDuplicateScanService {
             List<PlaylistItemRecord> items = playlistService.fetchAllTracks(meta.id());
             RemovalPlanBuilder.RemovalPlan plan = removalPlanBuilder.build(items, null);
 
-            // Same computation as DedupePlanService.preview's summary.exactDuplicatesToRemove.
-            int exactDuplicateTracks = plan.exact().stream().mapToInt(g -> g.remove().size()).sum();
+            int exactDuplicateTracks = plan.exactDuplicateCount();
             int possibleDuplicateGroups = plan.possible().size();
 
             if (exactDuplicateTracks > 0 || possibleDuplicateGroups > 0) {
