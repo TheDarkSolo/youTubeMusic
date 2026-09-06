@@ -314,8 +314,8 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
             </button>
           </div>
           <div className="page__header-actions-group account-menu-group">
-            <AccountMenu channelTitle={channelTitle} onLogout={handleLogout} />
             <ThemeToggle />
+            <AccountMenu channelTitle={channelTitle} onLogout={handleLogout} />
           </div>
         </div>
       </header>

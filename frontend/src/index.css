@@ -131,11 +131,58 @@ h3 {
   right: 20px;
 }
 
-.btn--theme {
-  padding: 6px;
-  display: inline-flex;
+/* Sun sits fixed at the left end, moon at the right; the knob slides between them to show
+   which one is active, rather than swapping a single icon in place. */
+.theme-switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+  padding: 0;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.theme-switch:hover {
+  border-color: var(--border-strong);
+}
+
+.theme-switch__icon {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.theme-switch__icon--sun {
+  left: 5px;
+}
+
+.theme-switch__icon--moon {
+  right: 5px;
+}
+
+.theme-switch__knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.18s ease;
+}
+
+.theme-switch[aria-checked="true"] .theme-switch__knob {
+  transform: translateX(20px);
 }
 
 .login-card {
@@ -175,7 +222,7 @@ h3 {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 16px;
   margin-bottom: 40px;
   padding-bottom: 24px;
@@ -186,6 +233,7 @@ h3 {
   display: flex;
   align-items: center;
   gap: 14px;
+  flex-shrink: 0;
 }
 
 .page__brand h1 {
@@ -201,10 +249,19 @@ h3 {
   font-size: 0.8rem;
 }
 
+/* Stays on the logo's row even if it doesn't all fit — scrolls horizontally rather than
+   wrapping onto a second line, since this is a desktop tool with no mobile layout. */
 .page__header-actions {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.page__header-actions::-webkit-scrollbar {
+  display: none;
 }
 
 /* Two clusters of header buttons: library-wide actions (audit, scan — heavier, less
@@ -217,6 +274,11 @@ h3 {
   padding-left: 12px;
   margin-left: 4px;
   border-left: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.page__header-actions > .btn {
+  flex-shrink: 0;
 }
 
 .page__header-actions .btn {
