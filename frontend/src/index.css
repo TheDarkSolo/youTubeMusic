@@ -200,6 +200,95 @@ h3 {
   flex-shrink: 0;
 }
 
+.account-menu-group {
+  align-items: center;
+}
+
+/* Account menu — avatar + name trigger with a small dropdown. Kept structurally solid
+   (see AccountMenu.tsx: click-outside, Escape, ARIA menu roles) even though this visual
+   treatment is expected to be revisited in an upcoming redesign pass. */
+.account-menu {
+  position: relative;
+}
+
+.account-menu__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 4px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.account-menu__trigger:hover,
+.account-menu__trigger[aria-expanded="true"] {
+  background: var(--surface-hover);
+  border-color: var(--border);
+}
+
+.account-menu__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 0.8em;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.account-menu__name {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-menu__dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 160px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  padding: 6px;
+  z-index: 60;
+}
+
+.account-menu__item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.88em;
+  cursor: pointer;
+}
+
+.account-menu__item:hover {
+  background: var(--surface-hover);
+}
+
+:root[data-theme="light"] .account-menu__dropdown {
+  box-shadow: 0 8px 24px rgba(20, 22, 26, 0.16);
+}
+
 section {
   margin-bottom: 36px;
 }

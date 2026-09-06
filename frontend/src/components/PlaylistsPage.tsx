@@ -14,6 +14,7 @@ import type {
   PlaylistsResponse,
 } from "../api/types";
 import { useErrors } from "../context/ErrorContext";
+import { AccountMenu } from "./AccountMenu";
 import { DedupeReview } from "./DedupeReview";
 import { DuplicateGroupCard } from "./DuplicateGroupCard";
 import { LibraryDuplicateScan } from "./LibraryDuplicateScan";
@@ -287,7 +288,6 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
           <h1>YT Music Manager</h1>
         </div>
         <div className="page__header-actions">
-          {channelTitle && <span className="muted">Signed in as {channelTitle}</span>}
           <button
             className={`btn btn--small ${selectMode ? "btn--primary" : "btn--secondary"}`}
             onClick={toggleSelectMode}
@@ -309,9 +309,9 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
             <button className="btn btn--secondary btn--small" onClick={fetchPlaylists} disabled={loading}>
               Refresh
             </button>
-            <button className="btn btn--tertiary btn--small" onClick={handleLogout}>
-              Log out
-            </button>
+          </div>
+          <div className="page__header-actions-group account-menu-group">
+            <AccountMenu channelTitle={channelTitle} onLogout={handleLogout} />
             <ThemeToggle />
           </div>
         </div>
