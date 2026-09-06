@@ -731,6 +731,30 @@ section {
   line-height: 1.6;
 }
 
+/* Liked Music Audit — one collapsible section per non-music category */
+.liked-audit__category {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+}
+
+.liked-audit__category summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.liked-audit__category .select-all-row {
+  margin: 10px 0 10px;
+}
+
+.liked-audit__category .checkbox-list {
+  margin: 0;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
 .like-route__steps a {
   color: var(--accent);
 }

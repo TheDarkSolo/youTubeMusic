@@ -5,16 +5,19 @@ import type {
   DedupePreviewResponse,
   ExecuteError,
   ExecuteStatus,
+  LikedAuditResponse,
   LikePreviewResponse,
   MergeExecuteResponse,
   MergePreviewResponse,
   MergeTarget,
   Playlist,
   PlaylistsResponse,
+  UnlikeResponse,
 } from "../api/types";
 import { useErrors } from "../context/ErrorContext";
 import { DedupeReview } from "./DedupeReview";
 import { DuplicateGroupCard } from "./DuplicateGroupCard";
+import { LikedAudit } from "./LikedAudit";
 import { LikeReview } from "./LikeReview";
 import { Logo } from "./Logo";
 import { MergeReview } from "./MergeReview";
@@ -30,10 +33,12 @@ type Overlay =
   | { kind: "dedupeReview"; preview: DedupePreviewResponse; playlistTitle: string }
   | { kind: "dedupeDone"; result: DedupeExecuteResponse }
   | { kind: "likeReview"; preview: LikePreviewResponse; playlistTitle: string }
+  | { kind: "likedAudit"; audit: LikedAuditResponse }
+  | { kind: "likedAuditDone"; result: UnlikeResponse }
   | null;
 
 /** §5.15 — human wording for an execute outcome; raw status words are too technical. */
-function statusLabel(status: ExecuteStatus): string {
+export function statusLabel(status: ExecuteStatus): string {
   switch (status) {
     case "quota_exhausted":
       return "Stopped early — daily quota reached";
@@ -88,7 +93,7 @@ function ExecuteErrors({ errors }: { errors: ExecuteError[] }) {
 }
 
 /** Both halves of an execute outcome: the quota stop (if any) and any per-item failures. */
-function ExecuteOutcome({
+export function ExecuteOutcome({
   status,
   remaining,
   errors,
@@ -117,6 +122,7 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
   const [dedupeLoadingId, setDedupeLoadingId] = useState<string | null>(null);
   const [deleteLoadingId, setDeleteLoadingId] = useState<string | null>(null);
   const [likeLoadingId, setLikeLoadingId] = useState<string | null>(null);
+  const [auditLoading, setAuditLoading] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const { reportError, quotaCoolingDown } = useErrors();
@@ -190,6 +196,18 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
     }
   }
 
+  async function handleAuditClick() {
+    setAuditLoading(true);
+    try {
+      const audit = await api.likedAudit();
+      setOverlay({ kind: "likedAudit", audit });
+    } catch (err) {
+      reportError(err);
+    } finally {
+      setAuditLoading(false);
+    }
+  }
+
   function toggleSelectMode() {
     setSelectMode((prev) => !prev);
     setSelectedIds(new Set());
@@ -238,6 +256,13 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
             onClick={toggleSelectMode}
           >
             {selectMode ? "Cancel selecting" : "Select playlists to merge"}
+          </button>
+          <button
+            className="btn btn--secondary btn--small"
+            onClick={handleAuditClick}
+            disabled={quotaCoolingDown || auditLoading}
+          >
+            {auditLoading ? "Auditing…" : "Audit Liked Music"}
           </button>
           <button className="btn btn--secondary btn--small" onClick={fetchPlaylists} disabled={loading}>
             Refresh
@@ -429,6 +454,42 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
             playlistTitle={overlay.playlistTitle}
             onCancel={() => setOverlay(null)}
           />
+        </Modal>
+      )}
+
+      {overlay?.kind === "likedAudit" && (
+        <Modal title="Audit Liked Music" onClose={() => setOverlay(null)} wide>
+          <LikedAudit
+            audit={overlay.audit}
+            onCancel={() => setOverlay(null)}
+            onCompleted={(result) => setOverlay({ kind: "likedAuditDone", result })}
+          />
+        </Modal>
+      )}
+
+      {overlay?.kind === "likedAuditDone" && (
+        <Modal
+          title={
+            overlay.result.status === "quota_exhausted"
+              ? "Liked-music cleanup stopped early"
+              : "Liked-music cleanup complete"
+          }
+          onClose={() => setOverlay(null)}
+        >
+          <p>
+            <strong>{statusLabel(overlay.result.status)}.</strong> Removed {overlay.result.unliked} like
+            {overlay.result.unliked === 1 ? "" : "s"}.
+          </p>
+          <ExecuteOutcome
+            status={overlay.result.status}
+            remaining={overlay.result.remaining}
+            errors={overlay.result.errors}
+          />
+          <div className="modal__actions">
+            <button className="btn btn--primary" onClick={() => setOverlay(null)}>
+              Done
+            </button>
+          </div>
         </Modal>
       )}
 

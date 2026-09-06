@@ -7,6 +7,7 @@ import type {
   DedupePreviewResponse,
   DeletePlaylistResponse,
   LikeAllResponse,
+  LikedAuditResponse,
   LikePreviewResponse,
   MergeExecuteRequest,
   MergeExecuteResponse,
@@ -14,6 +15,7 @@ import type {
   MergePreviewResponse,
   PlaylistTracksResponse,
   PlaylistsResponse,
+  UnlikeResponse,
 } from "./types";
 
 // Backend base URL — build-time config only, never a secret (see docs/ARCHITECTURE.md §6).
@@ -133,5 +135,13 @@ export const api = {
   likeAll: (playlistId: string) =>
     request<LikeAllResponse>(`/api/playlists/${encodeURIComponent(playlistId)}/like-all`, {
       method: "POST",
+    }),
+
+  likedAudit: () => request<LikedAuditResponse>("/api/liked/audit"),
+
+  unlikeVideos: (videoIds: string[]) =>
+    request<UnlikeResponse>("/api/liked/unlike", {
+      method: "POST",
+      body: JSON.stringify({ videoIds }),
     }),
 };

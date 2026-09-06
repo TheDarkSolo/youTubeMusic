@@ -225,3 +225,35 @@ export interface LikeAllResponse {
   alreadyLiked: number;
   errors: ExecuteError[];
 }
+
+// §5.16 — Liked Music Audit
+export interface LikedAuditItem {
+  videoId: string;
+  title: string;
+  channelTitle: string;
+}
+
+export interface LikedAuditGroup {
+  categoryId: string;
+  categoryName: string;
+  items: LikedAuditItem[];
+}
+
+/** No estimatedQuota — this is a pure read; the frontend computes selected.length * 50 itself. */
+export interface LikedAuditResponse {
+  totalLiked: number;
+  musicCount: number;
+  nonMusicGroups: LikedAuditGroup[];
+}
+
+export interface UnlikeRequest {
+  videoIds: string[];
+}
+
+/** Same status/remaining/errors shape as the other §5.15 execute responses — reuses that handling. */
+export interface UnlikeResponse {
+  status: ExecuteStatus;
+  remaining: number;
+  unliked: number;
+  errors: ExecuteError[];
+}
