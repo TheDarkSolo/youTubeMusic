@@ -13,6 +13,11 @@
   --danger: #e5484d;
   --danger-hover: #cc3f44;
   --warn: #e6a23c;
+  /* Foreground for text/icons sitting on top of an --accent or --warn *background*
+     (badges, .btn--primary) — a distinct concern from using accent/warn themselves as
+     foreground color (links, icon fills), which already holds AA contrast on both
+     themes' surface colors without help. */
+  --on-accent: #0b0d12;
   --radius: 8px;
   --radius-sm: 6px;
   color-scheme: dark;
@@ -37,6 +42,10 @@
   --danger: #c8393a;
   --danger-hover: #ad2f30;
   --warn: #9a6300;
+  /* Both --accent and --warn are darker/more saturated here than in dark mode (see above),
+     so #0b0d12-on-accent (the dark-mode badge/.btn--primary text) drops to ~3.6:1 — under
+     AA. White text clears ~5:1 on both. */
+  --on-accent: #ffffff;
   color-scheme: light;
 }
 
@@ -364,7 +373,7 @@ section {
   font-weight: 700;
   letter-spacing: 0.01em;
   background: var(--accent);
-  color: #0b0d12;
+  color: var(--on-accent);
 }
 
 .badge--fuzzy {
@@ -406,7 +415,7 @@ section {
 
 .btn--primary {
   background: var(--accent);
-  color: #0b0d12;
+  color: var(--on-accent);
 }
 
 .btn--primary:not(:disabled):hover {
@@ -527,6 +536,17 @@ section {
 :root[data-theme="light"] .banner--warn {
   background: #fbf1de;
   color: #5c3e00;
+}
+
+/* Elevation shadows tuned for the dark theme (rgba(0,0,0,0.4)) read as a heavy gray smudge
+   on a white/near-white background — lighten and tighten them here rather than restyling
+   the whole box-shadow system. */
+:root[data-theme="light"] .tooltip-bubble {
+  box-shadow: 0 6px 18px rgba(20, 22, 26, 0.14);
+}
+
+:root[data-theme="light"] .select-bar {
+  box-shadow: 0 8px 24px rgba(20, 22, 26, 0.16);
 }
 
 .banner__message {
