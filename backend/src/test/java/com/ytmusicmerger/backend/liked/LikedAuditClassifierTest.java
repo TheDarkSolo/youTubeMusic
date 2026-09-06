@@ -74,6 +74,30 @@ class LikedAuditClassifierTest {
     }
 
     @Test
+    void sameVideoLikedTwiceInTheRawListIsCountedOnce() {
+        // The "Liked videos" list is live and ordered by recency, so paginating it while
+        // something is actively liking tracks can surface the same videoId on two consecutive
+        // pages. Confirmed live: a real audit reported 834 music vs 832 shown in Liked Music.
+        var items = List.of(
+                item("i1", "song1", "A Song", "An Artist"),
+                item("i2", "vidGaming", "Let's Play", "GamerChannel"),
+                item("i3", "song1", "A Song", "An Artist"), // duplicate row, same videoId
+                item("i4", "vidGaming", "Let's Play", "GamerChannel") // duplicate row, same videoId
+        );
+        var metas = Map.of(
+                "song1", new VideoMetaRecord("song1", "A Song", "An Artist", "10"),
+                "vidGaming", new VideoMetaRecord("vidGaming", "Let's Play", "GamerChannel", "20")
+        );
+
+        var result = LikedAuditClassifier.classify(items, metas, Map.of("20", "Gaming"));
+
+        assertThat(result.totalLiked()).isEqualTo(2);
+        assertThat(result.musicCount()).isEqualTo(1);
+        assertThat(result.nonMusicGroups()).hasSize(1);
+        assertThat(result.nonMusicGroups().get(0).items()).hasSize(1);
+    }
+
+    @Test
     void missingCategoryNameFallsBackToUnknownLabelButKeepsRealCategoryId() {
         var items = List.of(item("i1", "vid1", "Some Video", "Some Channel"));
         var metas = Map.of("vid1", new VideoMetaRecord("vid1", "Some Video", "Some Channel", "22"));

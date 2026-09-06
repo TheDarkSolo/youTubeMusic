@@ -154,6 +154,13 @@ export function LikedAudit({ audit, onCancel, onCompleted }: Props) {
         </div>
       </div>
 
+      <p className="hint">
+        This looks at everything you've ever liked across YouTube, not just what shows in Liked
+        Music — the items below already don't appear there (that's exactly why they're worth
+        cleaning up), so removing them won't change Liked Music at all. It just clears them from
+        your underlying like history.
+      </p>
+
       <div className="liked-audit__categories">
         {audit.nonMusicGroups.map((group) => (
           <CategorySection

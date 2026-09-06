@@ -5,8 +5,10 @@ import com.ytmusicmerger.backend.playlist.VideoMetaRecord;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Pure classification logic for §5.16: given the raw "Liked videos" (`LL`) playlist items, the
@@ -30,10 +32,20 @@ public final class LikedAuditClassifier {
                                                Map<String, VideoMetaRecord> metaByVideoId,
                                                Map<String, String> categoryNames) {
         long musicCount = 0;
+        long totalCounted = 0;
         Map<String, List<LikedItemDto>> groupedByCategory = new LinkedHashMap<>();
 
+        // The raw "Liked videos" list is live and ordered by recency, so paginating it while the
+        // user (or this app's own like-script feature) is actively liking things can surface the
+        // same videoId on two consecutive pages as the list shifts underneath the fetch. Count
+        // each liked video once, not once per playlistItem row.
+        Set<String> seenVideoIds = new LinkedHashSet<>();
         for (PlaylistItemRecord item : items) {
             String videoId = item.videoId();
+            if (videoId != null && !seenVideoIds.add(videoId)) {
+                continue; // already counted this video from an earlier row
+            }
+            totalCounted++;
             VideoMetaRecord meta = videoId != null ? metaByVideoId.get(videoId) : null;
             String categoryId = meta != null && meta.categoryId() != null ? meta.categoryId() : UNKNOWN_CATEGORY_ID;
             String title = meta != null ? meta.title() : item.title();
@@ -56,6 +68,6 @@ public final class LikedAuditClassifier {
             nonMusicGroups.add(new NonMusicGroupDto(categoryId, categoryName, entry.getValue()));
         }
 
-        return new LikedAuditResponse(items.size(), musicCount, nonMusicGroups);
+        return new LikedAuditResponse(totalCounted, musicCount, nonMusicGroups);
     }
 }
