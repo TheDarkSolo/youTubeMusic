@@ -25,7 +25,7 @@ import { Logo } from "./Logo";
 import { MergeReview } from "./MergeReview";
 import { MergeSetup } from "./MergeSetup";
 import { Modal } from "./Modal";
-import { PlaylistCard } from "./PlaylistCard";
+import { DuplicateIcon, HeartIcon, PlaylistCard } from "./PlaylistCard";
 import { Spinner } from "./Spinner";
 
 type Overlay =
@@ -284,27 +284,33 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
           >
             {selectMode ? "Cancel selecting" : "Select playlists to merge"}
           </button>
-          <button
-            className="btn btn--secondary btn--small"
-            onClick={handleAuditClick}
-            disabled={quotaCoolingDown || auditLoading}
-          >
-            {auditLoading ? "Auditing…" : "Audit Liked Music"}
-          </button>
-          <button
-            className="btn btn--secondary btn--small"
-            onClick={handleScanClick}
-            disabled={quotaCoolingDown || scanLoading}
-            title="Scan every playlist for duplicate tracks — can take a while for a large library"
-          >
-            {scanLoading ? "Scanning…" : "Scan library for duplicates"}
-          </button>
-          <button className="btn btn--secondary btn--small" onClick={fetchPlaylists} disabled={loading}>
-            Refresh
-          </button>
-          <button className="btn btn--tertiary btn--small" onClick={handleLogout}>
-            Log out
-          </button>
+          <div className="page__header-actions-group">
+            <button
+              className="btn btn--secondary btn--small"
+              onClick={handleAuditClick}
+              disabled={quotaCoolingDown || auditLoading}
+            >
+              <HeartIcon />
+              {auditLoading ? "Auditing…" : "Audit Liked Music"}
+            </button>
+            <button
+              className="btn btn--secondary btn--small"
+              onClick={handleScanClick}
+              disabled={quotaCoolingDown || scanLoading}
+              title="Scan every playlist for duplicate tracks — can take a while for a large library"
+            >
+              <DuplicateIcon />
+              {scanLoading ? "Scanning…" : "Scan library for duplicates"}
+            </button>
+          </div>
+          <div className="page__header-actions-group">
+            <button className="btn btn--secondary btn--small" onClick={fetchPlaylists} disabled={loading}>
+              Refresh
+            </button>
+            <button className="btn btn--tertiary btn--small" onClick={handleLogout}>
+              Log out
+            </button>
+          </div>
         </div>
       </header>
 

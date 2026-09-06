@@ -9,6 +9,10 @@ interface Props {
   cleanupDisabled: boolean;
 }
 
+function totalCleanupCount(row: LibraryDuplicateScanRow): number {
+  return row.exactDuplicateTracks + row.possibleDuplicateGroups;
+}
+
 function summaryFor(row: LibraryDuplicateScanRow): string {
   const parts: string[] = [];
   if (row.exactDuplicateTracks > 0) {
@@ -38,13 +42,7 @@ export function LibraryDuplicateScan({
   cleanupDisabled,
 }: Props) {
   const rows = useMemo(
-    () =>
-      [...scan.playlists].sort(
-        (a, b) =>
-          b.exactDuplicateTracks +
-          b.possibleDuplicateGroups -
-          (a.exactDuplicateTracks + a.possibleDuplicateGroups),
-      ),
+    () => [...scan.playlists].sort((a, b) => totalCleanupCount(b) - totalCleanupCount(a)),
     [scan.playlists],
   );
 
@@ -70,6 +68,9 @@ export function LibraryDuplicateScan({
       <ul className="library-scan__list">
         {rows.map((row) => (
           <li key={row.playlistId} className="library-scan__row">
+            <span className="badge library-scan__count" title="Tracks flagged for cleanup">
+              {totalCleanupCount(row)}
+            </span>
             <div className="library-scan__info">
               <strong>{row.title}</strong>
               <span className="muted">

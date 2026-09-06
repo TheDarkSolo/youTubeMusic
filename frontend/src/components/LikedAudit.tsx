@@ -39,9 +39,9 @@ function CategorySection({
   }, [allSelected, noneSelected]);
 
   return (
-    <details className="liked-audit__category" open>
+    <details className="liked-audit__category">
       <summary>
-        {group.categoryName} ({total})
+        {group.categoryName} <span className="muted">({total})</span>
         {selectedCount > 0 && <span className="muted"> — {selectedCount} selected</span>}
       </summary>
       <label className="select-all-row">
@@ -122,57 +122,71 @@ export function LikedAudit({ audit, onCancel, onCompleted }: Props) {
     }
   }
 
+  if (audit.nonMusicGroups.length === 0) {
+    return (
+      <div className="liked-audit">
+        <p className="hint">
+          {audit.musicCount} of {audit.totalLiked} liked videos are music — nothing to clean up.
+        </p>
+        <div className="modal__actions">
+          <button className="btn btn--primary" onClick={onCancel}>
+            Done
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="liked-audit">
+      <div className="like-review__stats">
+        <div className="like-review__stat">
+          <span className="like-review__stat-value">{nonMusicCount}</span>
+          <span className="like-review__stat-label">Not music</span>
+        </div>
+        <div className="like-review__stat like-review__stat--muted">
+          <span className="like-review__stat-value">{audit.musicCount}</span>
+          <span className="like-review__stat-label">Music</span>
+        </div>
+        <div className="like-review__stat like-review__stat--muted">
+          <span className="like-review__stat-value">{audit.totalLiked}</span>
+          <span className="like-review__stat-label">Total liked</span>
+        </div>
+      </div>
+
+      <div className="liked-audit__categories">
+        {audit.nonMusicGroups.map((group) => (
+          <CategorySection
+            key={group.categoryId}
+            group={group}
+            selected={selected}
+            onToggleItem={toggleItem}
+            onToggleAll={toggleAllInGroup}
+          />
+        ))}
+      </div>
+
       <p className="summary-line">
-        {audit.musicCount} of {audit.totalLiked} liked videos are music. {nonMusicCount}{" "}
-        {nonMusicCount === 1 ? "is" : "are"} something else.
+        {selectedCount} like{selectedCount === 1 ? "" : "s"} selected to remove.
+      </p>
+      <p className={quotaIsHigh ? "hint hint--warn" : "hint"}>
+        Estimated YouTube API quota: ~{liveCommittedUnits} units — your daily limit is 10,000
+        units.
       </p>
 
-      {audit.nonMusicGroups.length === 0 ? (
-        <>
-          <p className="hint">Nothing to clean up — every liked video is classified as music.</p>
-          <div className="modal__actions">
-            <button className="btn btn--primary" onClick={onCancel}>
-              Done
-            </button>
-          </div>
-        </>
-      ) : (
-        <>
-          {audit.nonMusicGroups.map((group) => (
-            <CategorySection
-              key={group.categoryId}
-              group={group}
-              selected={selected}
-              onToggleItem={toggleItem}
-              onToggleAll={toggleAllInGroup}
-            />
-          ))}
-
-          <p className="hint">
-            {selectedCount} like{selectedCount === 1 ? "" : "s"} selected to remove.
-          </p>
-          <p className={quotaIsHigh ? "hint hint--warn" : "hint"}>
-            Estimated YouTube API quota: ~{liveCommittedUnits} units — your daily limit is 10,000
-            units.
-          </p>
-
-          <div className="modal__actions">
-            <button className="btn btn--tertiary" onClick={onCancel} disabled={submitting}>
-              Cancel
-            </button>
-            <button
-              className="btn btn--danger"
-              disabled={submitting || quotaCoolingDown || selectedCount === 0}
-              onClick={handleConfirm}
-            >
-              {submitting ? "Removing…" : `Remove ${selectedCount} like${selectedCount === 1 ? "" : "s"}`}
-            </button>
-          </div>
-          {submitting && <Spinner label="Removing likes…" />}
-        </>
-      )}
+      <div className="modal__actions">
+        <button className="btn btn--tertiary" onClick={onCancel} disabled={submitting}>
+          Cancel
+        </button>
+        <button
+          className="btn btn--danger"
+          disabled={submitting || quotaCoolingDown || selectedCount === 0}
+          onClick={handleConfirm}
+        >
+          {submitting ? "Removing…" : `Remove ${selectedCount} like${selectedCount === 1 ? "" : "s"}`}
+        </button>
+      </div>
+      {submitting && <Spinner label="Removing likes…" />}
     </div>
   );
 }

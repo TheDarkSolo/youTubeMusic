@@ -1,8 +1,12 @@
 import type { Playlist } from "../api/types";
 import { TrackList } from "./TrackList";
 
-/** Small heart glyph for the "Add to Liked Music" action — echoes the Logo's hand-authored SVG style. */
-function HeartIcon() {
+/**
+ * Small heart glyph for the "Add to Liked Music" action — echoes the Logo's hand-authored SVG
+ * style. Exported so the header's "Audit Liked Music" button (PlaylistsPage) can reuse the same
+ * glyph rather than inventing a new one for the same "Liked Music" concept.
+ */
+export function HeartIcon() {
   return (
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
       <path
@@ -13,8 +17,11 @@ function HeartIcon() {
   );
 }
 
-/** Two overlapping squares — the standard "duplicate/copy" glyph — for "Remove duplicate tracks". */
-function DuplicateIcon() {
+/**
+ * Two overlapping squares — the standard "duplicate/copy" glyph — for "Remove duplicate tracks".
+ * Exported so the header's "Scan library for duplicates" button (PlaylistsPage) can reuse it.
+ */
+export function DuplicateIcon() {
   return (
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
       <rect x="2.5" y="2.5" width="8" height="8" rx="1.5" fill="currentColor" fillOpacity="0.45" />

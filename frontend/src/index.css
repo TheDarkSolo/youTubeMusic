@@ -134,6 +134,27 @@ h3 {
   gap: 10px;
 }
 
+/* Two clusters of header buttons: library-wide actions (audit, scan — heavier, less
+   frequent) and session actions (refresh, log out). A hairline divider before each
+   group reads as a tier boundary without needing a new color or a heavier treatment. */
+.page__header-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 10px;
+  border-left: 1px solid var(--border);
+}
+
+.page__header-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.page__header-actions .btn svg {
+  flex-shrink: 0;
+}
+
 section {
   margin-bottom: 36px;
 }
@@ -732,12 +753,30 @@ section {
 }
 
 /* Liked Music Audit — one collapsible section per non-music category */
+.liked-audit .like-review__stats {
+  margin-bottom: 16px;
+}
+
+/* Caps the whole category list rather than each section individually — with a library that
+   has many non-music categories, this keeps the modal itself from growing unbounded; each
+   `<details>` is closed by default (see markup) so the collapsed view alone is already short. */
+.liked-audit__categories {
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 2px;
+  margin-bottom: 14px;
+}
+
 .liked-audit__category {
-  margin: 0 0 12px;
+  margin: 0 0 10px;
   padding: 10px 12px;
   background: var(--surface-alt);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm, 6px);
+}
+
+.liked-audit__category:last-child {
+  margin-bottom: 0;
 }
 
 .liked-audit__category summary {
@@ -791,11 +830,22 @@ section {
 }
 
 .library-scan__info {
+  flex: 1;
   min-width: 0;
 }
 
 .library-scan__info .hint {
   margin: 2px 0 0;
+}
+
+/* The one number that matters most in this list — how much there is to clean up in this
+   playlist — gets the same pill treatment as the match-type badge on duplicate groups, so
+   it reads at a glance without opening the row. Rows are already sorted by this value, so
+   the top of the list is naturally the most prominent. */
+.library-scan__count {
+  flex-shrink: 0;
+  min-width: 1.6em;
+  text-align: center;
 }
 
 /* Fallback view when the clipboard is blocked: the script is long, so cap it and let it
