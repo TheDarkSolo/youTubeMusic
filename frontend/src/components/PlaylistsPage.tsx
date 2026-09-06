@@ -313,10 +313,14 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
               Refresh
             </button>
           </div>
-          <div className="page__header-actions-group account-menu-group">
-            <ThemeToggle />
-            <AccountMenu channelTitle={channelTitle} onLogout={handleLogout} />
-          </div>
+        </div>
+        {/* Kept outside .page__header-actions on purpose: that container scrolls
+            horizontally instead of wrapping (see its CSS), and a scrollable ancestor
+            clips this menu's absolutely-positioned dropdown instead of letting it float
+            over the page. */}
+        <div className="account-menu-group">
+          <ThemeToggle />
+          <AccountMenu channelTitle={channelTitle} onLogout={handleLogout} />
         </div>
       </header>
 

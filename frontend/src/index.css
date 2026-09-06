@@ -171,10 +171,14 @@ h3 {
 
 .theme-switch__knob {
   position: absolute;
-  top: 3px;
+  /* top:50%/translateY(-50%) rather than a fixed top px — centers against the content
+     box regardless of the track's border width, same trick as .theme-switch__icon.
+     A fixed `top: 3px` measured from inside the 1px border, landing 1px low. */
+  top: 50%;
   left: 3px;
   width: 18px;
   height: 18px;
+  transform: translateY(-50%);
   border-radius: 50%;
   background: var(--accent);
   box-shadow: var(--shadow-sm);
@@ -182,7 +186,7 @@ h3 {
 }
 
 .theme-switch[aria-checked="true"] .theme-switch__knob {
-  transform: translateX(20px);
+  transform: translateY(-50%) translateX(20px);
 }
 
 .login-card {
@@ -255,6 +259,8 @@ h3 {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
   flex-wrap: nowrap;
   overflow-x: auto;
   scrollbar-width: none;
@@ -291,8 +297,16 @@ h3 {
   flex-shrink: 0;
 }
 
+/* Sits outside .page__header-actions on purpose — see the comment in PlaylistsPage.tsx —
+   so its dropdown never gets clipped by that container's horizontal scroll. */
 .account-menu-group {
+  display: flex;
   align-items: center;
+  gap: 8px;
+  padding-left: 12px;
+  margin-left: 8px;
+  border-left: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 /* Account menu — avatar + name trigger with a small dropdown (see AccountMenu.tsx:
@@ -304,11 +318,11 @@ h3 {
 .account-menu__trigger {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 12px 4px 4px;
+  gap: 6px;
+  padding: 6px 12px;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   color: var(--text);
   font: inherit;
   font-size: 0.85em;
@@ -321,20 +335,6 @@ h3 {
 .account-menu__trigger[aria-expanded="true"] {
   background: var(--surface-alt);
   border-color: var(--border);
-}
-
-.account-menu__avatar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: var(--on-accent);
-  font-size: 0.78em;
-  font-weight: 700;
-  flex-shrink: 0;
 }
 
 .account-menu__name {
