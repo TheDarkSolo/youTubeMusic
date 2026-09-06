@@ -4,6 +4,7 @@ import type { AuthStatus } from "../api/types";
 import { useErrors } from "../context/ErrorContext";
 import { Logo } from "./Logo";
 import { Spinner } from "./Spinner";
+import { ThemeToggle } from "./ThemeToggle";
 
 interface Props {
   /** Rendered once the session is confirmed authenticated. */
@@ -54,6 +55,9 @@ export function LoginGate({ children }: Props) {
   if (!status?.authenticated) {
     return (
       <div className="center-page">
+        <div className="theme-toggle-corner">
+          <ThemeToggle />
+        </div>
         <div className="login-card">
           <Logo size={40} className="login-card__logo" />
           <h1>YT Music Manager</h1>

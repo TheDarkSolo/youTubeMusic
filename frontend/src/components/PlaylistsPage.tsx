@@ -24,6 +24,7 @@ import { MergeSetup } from "./MergeSetup";
 import { Modal } from "./Modal";
 import { DuplicateIcon, PlaylistCard } from "./PlaylistCard";
 import { Spinner } from "./Spinner";
+import { ThemeToggle } from "./ThemeToggle";
 
 type Overlay =
   | { kind: "mergeSetup"; initialPlaylistIds: string[] }
@@ -311,6 +312,7 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
             <button className="btn btn--tertiary btn--small" onClick={handleLogout}>
               Log out
             </button>
+            <ThemeToggle />
           </div>
         </div>
       </header>

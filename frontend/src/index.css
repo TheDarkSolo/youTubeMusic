@@ -18,6 +18,28 @@
   color-scheme: dark;
 }
 
+/* Opt-in light theme (see src/theme.ts) — this app has always been dark-first, so light is a
+   deliberate second palette on the same token set, not a mechanical inversion. Darkened accent/
+   warn vs. their dark-mode values since both need more saturation to hold AA contrast on white
+   than they do on the near-black default background. */
+:root[data-theme="light"] {
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --surface-alt: #eef0f3;
+  --surface-hover: #e4e7ec;
+  --border: #dde1e7;
+  --border-strong: #c5cbd4;
+  --text: #14161a;
+  --text-muted: #5a6270;
+  --accent: #4a63d6;
+  --accent-hover: #3a51bd;
+  --accent-soft: rgba(74, 99, 214, 0.1);
+  --danger: #c8393a;
+  --danger-hover: #ad2f30;
+  --warn: #9a6300;
+  color-scheme: light;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -73,6 +95,20 @@ h3 {
   align-items: center;
   justify-content: center;
   padding: 24px;
+  position: relative;
+}
+
+.theme-toggle-corner {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+}
+
+.btn--theme {
+  padding: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .login-card {
@@ -481,6 +517,16 @@ section {
   background: #3a2a10;
   border: 1px solid var(--warn);
   color: #ffe3b0;
+}
+
+:root[data-theme="light"] .banner--error {
+  background: #fdecec;
+  color: #7a1f20;
+}
+
+:root[data-theme="light"] .banner--warn {
+  background: #fbf1de;
+  color: #5c3e00;
 }
 
 .banner__message {
