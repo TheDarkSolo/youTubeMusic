@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ApiError, api } from "../api/client";
 import type { DedupeExecuteResponse, DedupePreviewResponse } from "../api/types";
 import { useErrors } from "../context/ErrorContext";
@@ -58,6 +58,24 @@ export function DedupeReview({ preview, playlistTitle, onCancel, onCompleted }: 
       else next.add(groupId);
       return next;
     });
+  }
+
+  const possibleTotal = livePreview.removals.possibleDuplicates.length;
+  const allPossibleConfirmed = possibleTotal > 0 && confirmedPossible.size === possibleTotal;
+  const nonePossibleConfirmed = confirmedPossible.size === 0;
+  const selectAllPossibleRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (selectAllPossibleRef.current) {
+      selectAllPossibleRef.current.indeterminate = !allPossibleConfirmed && !nonePossibleConfirmed;
+    }
+  }, [allPossibleConfirmed, nonePossibleConfirmed]);
+
+  function toggleAllPossible() {
+    setConfirmedPossible(
+      allPossibleConfirmed
+        ? new Set()
+        : new Set(livePreview.removals.possibleDuplicates.map((g) => g.groupId)),
+    );
   }
 
   async function handleRePreview() {
@@ -145,21 +163,37 @@ export function DedupeReview({ preview, playlistTitle, onCancel, onCompleted }: 
         {livePreview.removals.possibleDuplicates.length === 0 ? (
           <p className="hint">No possible duplicates found.</p>
         ) : (
-          <ul className="checkbox-list">
-            {livePreview.removals.possibleDuplicates.map((g) => (
-              <li key={g.groupId}>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={confirmedPossible.has(g.groupId)}
-                    onChange={() => togglePossible(g.groupId)}
-                  />
-                  {Math.round(g.similarity * 100)}% similar:{" "}
-                  {g.items.map((it) => `"${it.title}" (${it.channelTitle})`).join(" vs. ")}
-                </label>
-              </li>
-            ))}
-          </ul>
+          <>
+            <label className="select-all-row">
+              <input
+                ref={selectAllPossibleRef}
+                type="checkbox"
+                checked={allPossibleConfirmed}
+                onChange={toggleAllPossible}
+              />
+              <strong>Select all possible duplicates</strong>
+              <span className="muted">
+                {" "}
+                — these are fuzzy title/channel matches, not exact — check the pairs below before
+                confirming all of them.
+              </span>
+            </label>
+            <ul className="checkbox-list">
+              {livePreview.removals.possibleDuplicates.map((g) => (
+                <li key={g.groupId}>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={confirmedPossible.has(g.groupId)}
+                      onChange={() => togglePossible(g.groupId)}
+                    />
+                    {Math.round(g.similarity * 100)}% similar:{" "}
+                    {g.items.map((it) => `"${it.title}" (${it.channelTitle})`).join(" vs. ")}
+                  </label>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </section>
 
