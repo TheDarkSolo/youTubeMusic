@@ -8,7 +8,6 @@ import type {
   DeletePlaylistResponse,
   LibraryDuplicateScanResponse,
   LikeAllResponse,
-  LikedAuditResponse,
   LikePreviewResponse,
   MergeExecuteRequest,
   MergeExecuteResponse,
@@ -16,7 +15,6 @@ import type {
   MergePreviewResponse,
   PlaylistTracksResponse,
   PlaylistsResponse,
-  UnlikeResponse,
 } from "./types";
 
 // Backend base URL — build-time config only, never a secret (see docs/ARCHITECTURE.md §6).
@@ -138,14 +136,6 @@ export const api = {
       method: "POST",
     }),
 
-  likedAudit: () => request<LikedAuditResponse>("/api/liked/audit"),
-
   libraryDuplicateScan: () =>
     request<LibraryDuplicateScanResponse>("/api/library/duplicate-scan"),
-
-  unlikeVideos: (videoIds: string[]) =>
-    request<UnlikeResponse>("/api/liked/unlike", {
-      method: "POST",
-      body: JSON.stringify({ videoIds }),
-    }),
 };

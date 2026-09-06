@@ -491,55 +491,9 @@ The response then reports:
 
 **Resuming**: no server-side bookmark is needed. Every execute path re-derives what's left from live YouTube state on its next run — like-all re-checks `videos.getRating` and skips already-liked tracks; merge/dedupe re-run their preview, which won't re-plan adds/removals that already landed. So "resume tomorrow" is simply "run the same action again after the quota resets" (midnight Pacific time), and the frontend should say so rather than implying the progress was lost.
 
-### 5.16 Liked Music Audit
+### 5.16 (removed) Liked Music Audit
 
-Motivation: YouTube Music's "Liked Music" auto-playlist is a music-filtered view over the account's single underlying "Liked videos" list. Users who like videos on regular YouTube, or via this app's own console-script feature, end up with non-music clutter in that same underlying list. This lets the user see what's in there beyond Liked Music and bulk-remove the non-music items.
-
-#### `GET /api/liked/audit`
-
-Read-only, no side effects. `"LL"` is YouTube's well-known literal playlist id for the authenticated user's "Liked videos" list; `playlistItems.list(playlistId="LL")` returns it like any other playlist, paginated internally by the backend until exhausted (same full-walk-then-return-one-flat-response pattern as §5.13's like-preview — no `pageToken` is exposed to the client here).
-
-Steps:
-1. Fetch every item from `playlistId="LL"` (1 unit/page).
-2. For each unique `videoId`, batch-fetch `videos.list(part=snippet, id=...)` 50 ids per call (same chunking pattern as `fetchPlaylistMeta`) to get `categoryId` and `channelTitle`.
-3. Call `videoCategories.list(part=snippet, regionCode="US")` once, cached for the process lifetime, to resolve `categoryId` → human-readable `categoryName`. (`regionCode` is a required parameter of this API call, not optional — hardcoding `"US"` is a deliberate simplification since category naming barely varies by region for this purpose and this is a single-user tool.)
-4. Classify: `categoryId == "10"` (Music) → counts toward `musicCount`. Everything else is grouped by `categoryId` into `nonMusicGroups`.
-
-```jsonc
-// 200 OK
-{
-  "totalLiked": 645,
-  "musicCount": 610,
-  "nonMusicGroups": [
-    {
-      "categoryId": "20",
-      "categoryName": "Gaming",
-      "items": [
-        { "videoId": "abc123", "title": "...", "channelTitle": "..." }
-      ]
-    }
-  ]
-}
-```
-
-No `estimatedQuota` field — this call is pure read (1-unit list/list calls only), no write cost yet. The frontend computes the cost of whatever the user selects to unlike (`selected.length * 50`), the same live-recompute-locally pattern already used by `MergeReview`/`DedupeReview` for their checkbox toggles.
-
-#### `POST /api/liked/unlike`
-
-```jsonc
-{ "videoIds": ["abc123", "def456"] }
-```
-
-No plan-token/preview-execute pairing, same reasoning as §5.12/§5.14: there is nothing to diff (the ids are exactly what the user checked), unliking an already-unliked video is a harmless no-op, and the checkbox selection itself is the explicit-confirmation mechanism.
-
-For each id: `videos.rate(id, rating="none")` (50 units, same write cost class as `rate("like")`). Follows §5.15's quota-exhaustion stop rule exactly, reusing the same detection/DTO pattern (`GoogleApiErrorTranslator`, `status: "quota_exhausted"` + `remaining`) — no new quota-handling logic.
-
-```jsonc
-// 200 OK
-{ "status": "completed", "unliked": 12, "remaining": 0, "errors": [] }
-```
-
-Errors follow §5.7. Requires only the existing `youtube` scope (§2) — `videos.rate` on the built-in Liked-videos list needs no additional scope beyond what merge/dedupe/like-all already require.
+Built, then removed after the user who actually uses this app pointed out the premise was wrong: they wanted junk cleaned out of **YouTube Music's own library/playlists**, not out of the account's account-wide "Liked videos" list (`LL`) that this fed on — those are different datasets, and the user doesn't use regular YouTube in a way that makes the latter matter to them. Separately, YouTube Music already has a native setting to exclude non-YouTube-Music likes from ever showing in Liked Music, which independently made the "clutter in Liked Music" motivation moot regardless. Kept as a numbered-section placeholder (rather than renumbering everything after it) so old commit messages/discussion referencing §5.16 still resolve to something. Do not rebuild this without a concrete plan for cleaning actual YT Music playlist content instead.
 
 ### 5.17 Library-wide Duplicate Scan
 

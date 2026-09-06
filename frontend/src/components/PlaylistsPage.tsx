@@ -6,26 +6,23 @@ import type {
   ExecuteError,
   ExecuteStatus,
   LibraryDuplicateScanResponse,
-  LikedAuditResponse,
   LikePreviewResponse,
   MergeExecuteResponse,
   MergePreviewResponse,
   MergeTarget,
   Playlist,
   PlaylistsResponse,
-  UnlikeResponse,
 } from "../api/types";
 import { useErrors } from "../context/ErrorContext";
 import { DedupeReview } from "./DedupeReview";
 import { DuplicateGroupCard } from "./DuplicateGroupCard";
 import { LibraryDuplicateScan } from "./LibraryDuplicateScan";
-import { LikedAudit } from "./LikedAudit";
 import { LikeReview } from "./LikeReview";
 import { Logo } from "./Logo";
 import { MergeReview } from "./MergeReview";
 import { MergeSetup } from "./MergeSetup";
 import { Modal } from "./Modal";
-import { DuplicateIcon, HeartIcon, PlaylistCard } from "./PlaylistCard";
+import { DuplicateIcon, PlaylistCard } from "./PlaylistCard";
 import { Spinner } from "./Spinner";
 
 type Overlay =
@@ -35,8 +32,6 @@ type Overlay =
   | { kind: "dedupeReview"; preview: DedupePreviewResponse; playlistTitle: string }
   | { kind: "dedupeDone"; result: DedupeExecuteResponse }
   | { kind: "likeReview"; preview: LikePreviewResponse; playlistTitle: string }
-  | { kind: "likedAudit"; audit: LikedAuditResponse }
-  | { kind: "likedAuditDone"; result: UnlikeResponse }
   | { kind: "libraryScan"; scan: LibraryDuplicateScanResponse }
   | null;
 
@@ -125,7 +120,6 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
   const [dedupeLoadingId, setDedupeLoadingId] = useState<string | null>(null);
   const [deleteLoadingId, setDeleteLoadingId] = useState<string | null>(null);
   const [likeLoadingId, setLikeLoadingId] = useState<string | null>(null);
-  const [auditLoading, setAuditLoading] = useState(false);
   const [scanLoading, setScanLoading] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -206,18 +200,6 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
     }
   }
 
-  async function handleAuditClick() {
-    setAuditLoading(true);
-    try {
-      const audit = await api.likedAudit();
-      setOverlay({ kind: "likedAudit", audit });
-    } catch (err) {
-      reportError(err);
-    } finally {
-      setAuditLoading(false);
-    }
-  }
-
   /**
    * §5.17 — read-only aggregate scan over every playlist. Can take several seconds to tens of
    * seconds for a large library (sequential per-playlist track fetches on the backend), so the
@@ -285,14 +267,6 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
             {selectMode ? "Cancel selecting" : "Select playlists to merge"}
           </button>
           <div className="page__header-actions-group">
-            <button
-              className="btn btn--secondary btn--small"
-              onClick={handleAuditClick}
-              disabled={quotaCoolingDown || auditLoading}
-            >
-              <HeartIcon />
-              {auditLoading ? "Auditing…" : "Audit Liked Music"}
-            </button>
             <button
               className="btn btn--secondary btn--small"
               onClick={handleScanClick}
@@ -498,42 +472,6 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
             playlistTitle={overlay.playlistTitle}
             onCancel={() => setOverlay(null)}
           />
-        </Modal>
-      )}
-
-      {overlay?.kind === "likedAudit" && (
-        <Modal title="Audit Liked Music" onClose={() => setOverlay(null)} wide>
-          <LikedAudit
-            audit={overlay.audit}
-            onCancel={() => setOverlay(null)}
-            onCompleted={(result) => setOverlay({ kind: "likedAuditDone", result })}
-          />
-        </Modal>
-      )}
-
-      {overlay?.kind === "likedAuditDone" && (
-        <Modal
-          title={
-            overlay.result.status === "quota_exhausted"
-              ? "Liked-music cleanup stopped early"
-              : "Liked-music cleanup complete"
-          }
-          onClose={() => setOverlay(null)}
-        >
-          <p>
-            <strong>{statusLabel(overlay.result.status)}.</strong> Removed {overlay.result.unliked} like
-            {overlay.result.unliked === 1 ? "" : "s"}.
-          </p>
-          <ExecuteOutcome
-            status={overlay.result.status}
-            remaining={overlay.result.remaining}
-            errors={overlay.result.errors}
-          />
-          <div className="modal__actions">
-            <button className="btn btn--primary" onClick={() => setOverlay(null)}>
-              Done
-            </button>
-          </div>
         </Modal>
       )}
 
