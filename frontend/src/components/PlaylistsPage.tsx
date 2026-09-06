@@ -29,10 +29,13 @@ type Overlay =
   | { kind: "mergeSetup"; initialPlaylistIds: string[] }
   | { kind: "mergeReview"; preview: MergePreviewResponse; sourcePlaylistIds: string[]; target: MergeTarget }
   | { kind: "mergeDone"; result: MergeExecuteResponse }
-  | { kind: "dedupeReview"; preview: DedupePreviewResponse; playlistTitle: string }
-  | { kind: "dedupeDone"; result: DedupeExecuteResponse }
+  | { kind: "dedupeReview"; preview: DedupePreviewResponse; playlistTitle: string; fromScan?: boolean }
+  | { kind: "dedupeDone"; result: DedupeExecuteResponse; fromScan?: boolean }
   | { kind: "likeReview"; preview: LikePreviewResponse; playlistTitle: string }
-  | { kind: "libraryScan"; scan: LibraryDuplicateScanResponse }
+  // No `scan` payload here on purpose — the result lives in `scanResult` state (below), kept
+  // alive across the dedupe flow so re-opening this overlay after cleaning up one playlist
+  // doesn't require re-running the whole library scan (see handleReturnFromDedupe).
+  | { kind: "libraryScan" }
   | null;
 
 /** §5.15 — human wording for an execute outcome; raw status words are too technical. */
@@ -121,6 +124,10 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
   const [deleteLoadingId, setDeleteLoadingId] = useState<string | null>(null);
   const [likeLoadingId, setLikeLoadingId] = useState<string | null>(null);
   const [scanLoading, setScanLoading] = useState(false);
+  // Cached separately from `overlay` so cleaning up one playlist from the scan's results (which
+  // routes through the dedupe overlay and back) doesn't lose the rest of the list — re-scanning
+  // is a full library read, so it only happens when the user explicitly asks again.
+  const [scanResult, setScanResult] = useState<LibraryDuplicateScanResponse | null>(null);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const { reportError, quotaCoolingDown } = useErrors();
@@ -157,16 +164,35 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
    * "Remove duplicate tracks" button and the library-wide scan's "Clean up" row action funnel
    * into the exact same flow — §5.17 explicitly forbids a second dedupe-execute path.
    */
-  async function handleDedupeClick(playlist: Pick<Playlist, "id" | "title">) {
+  async function handleDedupeClick(playlist: Pick<Playlist, "id" | "title">, fromScan = false) {
     setDedupeLoadingId(playlist.id);
     try {
       const preview = await api.dedupePreview({ playlistId: playlist.id });
-      setOverlay({ kind: "dedupeReview", preview, playlistTitle: playlist.title });
+      setOverlay({ kind: "dedupeReview", preview, playlistTitle: playlist.title, fromScan });
     } catch (err) {
       reportError(err);
     } finally {
       setDedupeLoadingId(null);
     }
+  }
+
+  /**
+   * Closes the dedupe flow. If it was opened from the library scan's "Clean up" (fromScan),
+   * returns to the scan list instead of the main page — dropping the just-cleaned playlist from
+   * the cached `scanResult` rather than re-fetching it, so this costs zero extra API calls.
+   * `cleanedPlaylistId` is omitted on a plain cancel, where nothing actually changed yet.
+   */
+  function handleReturnFromDedupe(fromScan?: boolean, cleanedPlaylistId?: string) {
+    if (!fromScan) {
+      setOverlay(null);
+      return;
+    }
+    if (cleanedPlaylistId) {
+      setScanResult((prev) =>
+        prev ? { playlists: prev.playlists.filter((p) => p.playlistId !== cleanedPlaylistId) } : prev,
+      );
+    }
+    setOverlay({ kind: "libraryScan" });
   }
 
   async function handleDeleteClick(playlist: Playlist) {
@@ -209,7 +235,8 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
     setScanLoading(true);
     try {
       const scan = await api.libraryDuplicateScan();
-      setOverlay({ kind: "libraryScan", scan });
+      setScanResult(scan);
+      setOverlay({ kind: "libraryScan" });
     } catch (err) {
       reportError(err);
     } finally {
@@ -426,13 +453,17 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
       )}
 
       {overlay?.kind === "dedupeReview" && (
-        <Modal title={`Remove duplicates — ${overlay.playlistTitle}`} onClose={() => setOverlay(null)} wide>
+        <Modal
+          title={`Remove duplicates — ${overlay.playlistTitle}`}
+          onClose={() => handleReturnFromDedupe(overlay.fromScan)}
+          wide
+        >
           <DedupeReview
             preview={overlay.preview}
             playlistTitle={overlay.playlistTitle}
-            onCancel={() => setOverlay(null)}
+            onCancel={() => handleReturnFromDedupe(overlay.fromScan)}
             onCompleted={(result) => {
-              setOverlay({ kind: "dedupeDone", result });
+              setOverlay({ kind: "dedupeDone", result, fromScan: overlay.fromScan });
               fetchPlaylists();
             }}
           />
@@ -446,7 +477,7 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
               ? "Duplicate removal stopped early"
               : "Duplicates removed"
           }
-          onClose={() => setOverlay(null)}
+          onClose={() => handleReturnFromDedupe(overlay.fromScan, overlay.result.playlistId)}
         >
           <p>
             <strong>{statusLabel(overlay.result.status)}.</strong> Removed {overlay.result.removedExact}{" "}
@@ -458,7 +489,10 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
             errors={overlay.result.errors}
           />
           <div className="modal__actions">
-            <button className="btn btn--primary" onClick={() => setOverlay(null)}>
+            <button
+              className="btn btn--primary"
+              onClick={() => handleReturnFromDedupe(overlay.fromScan, overlay.result.playlistId)}
+            >
               Done
             </button>
           </div>
@@ -475,13 +509,13 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
         </Modal>
       )}
 
-      {overlay?.kind === "libraryScan" && (
+      {overlay?.kind === "libraryScan" && scanResult && (
         <Modal title="Library duplicate scan" onClose={() => setOverlay(null)} wide>
           <LibraryDuplicateScan
-            scan={overlay.scan}
+            scan={scanResult}
             onCancel={() => setOverlay(null)}
             onCleanupClick={(row) =>
-              handleDedupeClick({ id: row.playlistId, title: row.title })
+              handleDedupeClick({ id: row.playlistId, title: row.title }, true)
             }
             cleanupLoadingPlaylistId={dedupeLoadingId}
             cleanupDisabled={quotaCoolingDown || dedupeLoadingId !== null}
