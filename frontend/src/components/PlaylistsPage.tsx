@@ -5,6 +5,7 @@ import type {
   DedupePreviewResponse,
   ExecuteError,
   ExecuteStatus,
+  LibraryDuplicateScanResponse,
   LikedAuditResponse,
   LikePreviewResponse,
   MergeExecuteResponse,
@@ -17,6 +18,7 @@ import type {
 import { useErrors } from "../context/ErrorContext";
 import { DedupeReview } from "./DedupeReview";
 import { DuplicateGroupCard } from "./DuplicateGroupCard";
+import { LibraryDuplicateScan } from "./LibraryDuplicateScan";
 import { LikedAudit } from "./LikedAudit";
 import { LikeReview } from "./LikeReview";
 import { Logo } from "./Logo";
@@ -35,6 +37,7 @@ type Overlay =
   | { kind: "likeReview"; preview: LikePreviewResponse; playlistTitle: string }
   | { kind: "likedAudit"; audit: LikedAuditResponse }
   | { kind: "likedAuditDone"; result: UnlikeResponse }
+  | { kind: "libraryScan"; scan: LibraryDuplicateScanResponse }
   | null;
 
 /** §5.15 — human wording for an execute outcome; raw status words are too technical. */
@@ -123,6 +126,7 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
   const [deleteLoadingId, setDeleteLoadingId] = useState<string | null>(null);
   const [likeLoadingId, setLikeLoadingId] = useState<string | null>(null);
   const [auditLoading, setAuditLoading] = useState(false);
+  const [scanLoading, setScanLoading] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const { reportError, quotaCoolingDown } = useErrors();
@@ -153,7 +157,13 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
     }
   }
 
-  async function handleDedupeClick(playlist: Playlist) {
+  /**
+   * §5.10/§5.17 — shared entry point into the dedupe preview/review/confirm flow. Loosened to
+   * `id`/`title` only (rather than the full `Playlist` shape) so both `PlaylistCard`'s own
+   * "Remove duplicate tracks" button and the library-wide scan's "Clean up" row action funnel
+   * into the exact same flow — §5.17 explicitly forbids a second dedupe-execute path.
+   */
+  async function handleDedupeClick(playlist: Pick<Playlist, "id" | "title">) {
     setDedupeLoadingId(playlist.id);
     try {
       const preview = await api.dedupePreview({ playlistId: playlist.id });
@@ -205,6 +215,23 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
       reportError(err);
     } finally {
       setAuditLoading(false);
+    }
+  }
+
+  /**
+   * §5.17 — read-only aggregate scan over every playlist. Can take several seconds to tens of
+   * seconds for a large library (sequential per-playlist track fetches on the backend), so the
+   * button/loading copy sets that expectation rather than looking stuck.
+   */
+  async function handleScanClick() {
+    setScanLoading(true);
+    try {
+      const scan = await api.libraryDuplicateScan();
+      setOverlay({ kind: "libraryScan", scan });
+    } catch (err) {
+      reportError(err);
+    } finally {
+      setScanLoading(false);
     }
   }
 
@@ -264,6 +291,14 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
           >
             {auditLoading ? "Auditing…" : "Audit Liked Music"}
           </button>
+          <button
+            className="btn btn--secondary btn--small"
+            onClick={handleScanClick}
+            disabled={quotaCoolingDown || scanLoading}
+            title="Scan every playlist for duplicate tracks — can take a while for a large library"
+          >
+            {scanLoading ? "Scanning…" : "Scan library for duplicates"}
+          </button>
           <button className="btn btn--secondary btn--small" onClick={fetchPlaylists} disabled={loading}>
             Refresh
           </button>
@@ -274,6 +309,9 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
       </header>
 
       {loading && <Spinner label="Loading playlists…" />}
+      {scanLoading && (
+        <Spinner label="Scanning your library for duplicates — this can take a minute for a large library…" />
+      )}
 
       {!loading && data && (
         <>
@@ -490,6 +528,20 @@ export function PlaylistsPage({ channelTitle, onLoggedOut }: Props) {
               Done
             </button>
           </div>
+        </Modal>
+      )}
+
+      {overlay?.kind === "libraryScan" && (
+        <Modal title="Library duplicate scan" onClose={() => setOverlay(null)} wide>
+          <LibraryDuplicateScan
+            scan={overlay.scan}
+            onCancel={() => setOverlay(null)}
+            onCleanupClick={(row) =>
+              handleDedupeClick({ id: row.playlistId, title: row.title })
+            }
+            cleanupLoadingPlaylistId={dedupeLoadingId}
+            cleanupDisabled={quotaCoolingDown || dedupeLoadingId !== null}
+          />
         </Modal>
       )}
 

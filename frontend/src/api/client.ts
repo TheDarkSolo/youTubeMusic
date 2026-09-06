@@ -6,6 +6,7 @@ import type {
   DedupePreviewRequest,
   DedupePreviewResponse,
   DeletePlaylistResponse,
+  LibraryDuplicateScanResponse,
   LikeAllResponse,
   LikedAuditResponse,
   LikePreviewResponse,
@@ -138,6 +139,9 @@ export const api = {
     }),
 
   likedAudit: () => request<LikedAuditResponse>("/api/liked/audit"),
+
+  libraryDuplicateScan: () =>
+    request<LibraryDuplicateScanResponse>("/api/library/duplicate-scan"),
 
   unlikeVideos: (videoIds: string[]) =>
     request<UnlikeResponse>("/api/liked/unlike", {

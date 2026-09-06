@@ -257,3 +257,18 @@ export interface UnlikeResponse {
   unliked: number;
   errors: ExecuteError[];
 }
+
+// §5.17 — Library-wide Duplicate Scan. Read-only aggregate over the existing per-playlist
+// dedupe detector, purely for counts — there is no execute endpoint here. Selecting a row
+// hands off entirely to the existing /api/dedupe/preview -> review -> confirm flow.
+export interface LibraryDuplicateScanRow {
+  playlistId: string;
+  title: string;
+  itemCount: number;
+  exactDuplicateTracks: number;
+  possibleDuplicateGroups: number;
+}
+
+export interface LibraryDuplicateScanResponse {
+  playlists: LibraryDuplicateScanRow[];
+}
