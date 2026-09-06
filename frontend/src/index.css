@@ -227,7 +227,10 @@ h3 {
   justify-content: space-between;
   align-items: center;
   flex-wrap: nowrap;
-  gap: 16px;
+  /* Matches .page__header-actions-group's own pre-divider spacing (8px gap + 4px margin)
+     so the divider before the theme/account group — a sibling of .page__header-actions,
+     not nested inside it — lines up with the others instead of sitting further out. */
+  gap: 12px;
   margin-bottom: 40px;
   padding-bottom: 24px;
   border-bottom: 1px solid var(--border);
@@ -304,7 +307,6 @@ h3 {
   align-items: center;
   gap: 8px;
   padding-left: 12px;
-  margin-left: 8px;
   border-left: 1px solid var(--border);
   flex-shrink: 0;
 }
