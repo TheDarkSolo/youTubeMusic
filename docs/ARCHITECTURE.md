@@ -491,6 +491,84 @@ The response then reports:
 
 **Resuming**: no server-side bookmark is needed. Every execute path re-derives what's left from live YouTube state on its next run — like-all re-checks `videos.getRating` and skips already-liked tracks; merge/dedupe re-run their preview, which won't re-plan adds/removals that already landed. So "resume tomorrow" is simply "run the same action again after the quota resets" (midnight Pacific time), and the frontend should say so rather than implying the progress was lost.
 
+### 5.16 Liked Music Audit
+
+Motivation: YouTube Music's "Liked Music" auto-playlist is a music-filtered view over the account's single underlying "Liked videos" list. Users who like videos on regular YouTube, or via this app's own console-script feature, end up with non-music clutter in that same underlying list. This lets the user see what's in there beyond Liked Music and bulk-remove the non-music items.
+
+#### `GET /api/liked/audit`
+
+Read-only, no side effects. `"LL"` is YouTube's well-known literal playlist id for the authenticated user's "Liked videos" list; `playlistItems.list(playlistId="LL")` returns it like any other playlist, paginated internally by the backend until exhausted (same full-walk-then-return-one-flat-response pattern as §5.13's like-preview — no `pageToken` is exposed to the client here).
+
+Steps:
+1. Fetch every item from `playlistId="LL"` (1 unit/page).
+2. For each unique `videoId`, batch-fetch `videos.list(part=snippet, id=...)` 50 ids per call (same chunking pattern as `fetchPlaylistMeta`) to get `categoryId` and `channelTitle`.
+3. Call `videoCategories.list(part=snippet, regionCode="US")` once, cached for the process lifetime, to resolve `categoryId` → human-readable `categoryName`. (`regionCode` is a required parameter of this API call, not optional — hardcoding `"US"` is a deliberate simplification since category naming barely varies by region for this purpose and this is a single-user tool.)
+4. Classify: `categoryId == "10"` (Music) → counts toward `musicCount`. Everything else is grouped by `categoryId` into `nonMusicGroups`.
+
+```jsonc
+// 200 OK
+{
+  "totalLiked": 645,
+  "musicCount": 610,
+  "nonMusicGroups": [
+    {
+      "categoryId": "20",
+      "categoryName": "Gaming",
+      "items": [
+        { "videoId": "abc123", "title": "...", "channelTitle": "..." }
+      ]
+    }
+  ]
+}
+```
+
+No `estimatedQuota` field — this call is pure read (1-unit list/list calls only), no write cost yet. The frontend computes the cost of whatever the user selects to unlike (`selected.length * 50`), the same live-recompute-locally pattern already used by `MergeReview`/`DedupeReview` for their checkbox toggles.
+
+#### `POST /api/liked/unlike`
+
+```jsonc
+{ "videoIds": ["abc123", "def456"] }
+```
+
+No plan-token/preview-execute pairing, same reasoning as §5.12/§5.14: there is nothing to diff (the ids are exactly what the user checked), unliking an already-unliked video is a harmless no-op, and the checkbox selection itself is the explicit-confirmation mechanism.
+
+For each id: `videos.rate(id, rating="none")` (50 units, same write cost class as `rate("like")`). Follows §5.15's quota-exhaustion stop rule exactly, reusing the same detection/DTO pattern (`GoogleApiErrorTranslator`, `status: "quota_exhausted"` + `remaining`) — no new quota-handling logic.
+
+```jsonc
+// 200 OK
+{ "status": "completed", "unliked": 12, "remaining": 0, "errors": [] }
+```
+
+Errors follow §5.7. Requires only the existing `youtube` scope (§2) — `videos.rate` on the built-in Liked-videos list needs no additional scope beyond what merge/dedupe/like-all already require.
+
+### 5.17 Library-wide Duplicate Scan
+
+Motivation: the existing per-playlist dedupe (§5.10/§5.11) already finds exact and possible duplicate tracks within one playlist, but the user has to open each playlist individually to discover which ones are worth cleaning up. This is deliberately **not** a new duplicate-detection concept — it is an aggregate discovery layer over the existing `DuplicateTrackDetector`, purely for counts.
+
+#### `GET /api/library/duplicate-scan`
+
+Read-only. For every playlist from the same `playlists.list` call `GET /api/playlists` (§5.5) already uses: fetch its full track list (`playlistItems.list`, paginated), skip playlists with fewer than 2 tracks, and run the existing `DuplicateTrackDetector` against it purely for counts. Reuses the exact same summary computation `/api/dedupe/preview` (§5.10) already performs — do not reimplement it:
+
+- `exactDuplicateTracks` = sum of each exact group's `remove.length` (same as `/api/dedupe/preview`'s `summary.exactDuplicatesToRemove`).
+- `possibleDuplicateGroups` = count of fuzzy groups found.
+
+Only playlists with a nonzero result are included in the response:
+
+```jsonc
+// 200 OK
+{
+  "playlists": [
+    { "playlistId": "PLxxxxxxxxxxxxxxxxxx", "title": "Tore", "itemCount": 176, "exactDuplicateTracks": 12, "possibleDuplicateGroups": 3 }
+  ]
+}
+```
+
+**No new execute endpoint.** Selecting a row from this scan's results takes the user straight into the existing `/api/dedupe/preview` → review → confirm flow (§5.10/§5.11) for that specific `playlistId`, reusing that UI and those endpoints entirely. The backend and frontend agents must not build a second dedupe-execute path for this feature.
+
+**Cost/latency tradeoff**: every call this makes is a 1-unit read, so it's cheap on quota even for a large library, but walking every playlist's full track list sequentially can take several seconds to tens of seconds for an account with many playlists. This is an accepted tradeoff for a personal-use tool — a simple loading state on the frontend is sufficient; no progress-streaming machinery or background job infrastructure is warranted.
+
+Requires only the existing `youtube` scope (§2); all calls here are reads already covered by it.
+
 ---
 
 ## 6. Backend Environment Variables
@@ -522,3 +600,5 @@ The frontend needs no secrets — its only build-time config is the backend base
 - No multi-user auth, no account system beyond the single Google login.
 - No automatic deletion of emptied source playlists after a merge (manual, separate action, left for a later iteration).
 - No background jobs / scheduling — every action is user-initiated and synchronous from the browser's perspective.
+- No new OAuth scope for the Liked Music Audit (§5.16) — `playlistItems.list` on `"LL"` and `videos.rate(..., "none")` are both covered by the existing `youtube` scope, so existing users do not need to re-consent.
+- No new OAuth scope for the Library-wide Duplicate Scan (§5.17) either, and no new execute endpoint — it is a read-only aggregate over the existing per-playlist dedupe flow, not a parallel duplicate-removal path.
