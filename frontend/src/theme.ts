@@ -2,14 +2,13 @@ export type Theme = "dark" | "light";
 
 const STORAGE_KEY = "ytmm-theme";
 
-/** Reads the user's saved theme choice. Defaults to "dark" — this app has always been
- * dark-first; light is an opt-in, not a system-preference guess. */
+/** Reads the user's saved theme choice. Defaults to "light" for a first-time visitor. */
 export function getStoredTheme(): Theme {
   try {
-    return localStorage.getItem(STORAGE_KEY) === "light" ? "light" : "dark";
+    return localStorage.getItem(STORAGE_KEY) === "dark" ? "dark" : "light";
   } catch {
     // localStorage can throw in private-browsing/blocked-storage contexts.
-    return "dark";
+    return "light";
   }
 }
 
