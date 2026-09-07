@@ -281,7 +281,10 @@ h3 {
    the desktop rule above (nowrap + shrink-to-zero) would squeeze .page__header-actions
    down to 0 width and the buttons would just vanish instead of reflowing. Wrap into two
    rows instead: brand and the account menu stay on the top row, the button row drops
-   below at full width (still horizontally scrollable if it's ever too narrow itself). */
+   below at full width. That row wraps onto as many lines as it needs (rather than
+   scrolling horizontally) — a button cut off mid-label with no scroll affordance reads
+   as broken, not as "swipe for more". Dividers between button groups only make sense
+   within one continuous row, so they're dropped here in favor of a plain wrapped grid. */
 @media (max-width: 720px) {
   .page__header {
     flex-wrap: wrap;
@@ -301,6 +304,15 @@ h3 {
     order: 3;
     flex-basis: 100%;
     margin-left: 0;
+    flex-wrap: wrap;
+    overflow-x: visible;
+    row-gap: 8px;
+  }
+
+  .page__header-actions-group {
+    padding-left: 0;
+    margin-left: 0;
+    border-left: none;
   }
 }
 
