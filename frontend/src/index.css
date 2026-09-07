@@ -277,6 +277,33 @@ h3 {
   display: none;
 }
 
+/* Below this, brand + account-group + all the action buttons no longer fit on one line —
+   the desktop rule above (nowrap + shrink-to-zero) would squeeze .page__header-actions
+   down to 0 width and the buttons would just vanish instead of reflowing. Wrap into two
+   rows instead: brand and the account menu stay on the top row, the button row drops
+   below at full width (still horizontally scrollable if it's ever too narrow itself). */
+@media (max-width: 720px) {
+  .page__header {
+    flex-wrap: wrap;
+    row-gap: 14px;
+  }
+
+  .page__brand {
+    order: 1;
+  }
+
+  .account-menu-group {
+    order: 2;
+    margin-left: auto;
+  }
+
+  .page__header-actions {
+    order: 3;
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+}
+
 /* Two clusters of header buttons: library-wide actions (audit, scan — heavier, less
    frequent) and session actions (refresh, log out). A hairline divider before each
    group reads as a tier boundary without needing a new color or a heavier treatment. */
