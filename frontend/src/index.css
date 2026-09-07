@@ -224,7 +224,6 @@ h3 {
 
 .page__header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   flex-wrap: nowrap;
   /* Matches .page__header-actions-group's own pre-divider spacing (8px gap + 4px margin)
@@ -257,13 +256,18 @@ h3 {
 }
 
 /* Stays on the logo's row even if it doesn't all fit — scrolls horizontally rather than
-   wrapping onto a second line, since this is a desktop tool with no mobile layout. */
+   wrapping onto a second line, since this is a desktop tool with no mobile layout.
+   `flex: 0 1 auto` (not 1 1 auto) + `margin-left: auto` — the buttons must NOT grow to
+   fill leftover width themselves, or any extra space at a wide viewport shows up as a
+   gap after the last button instead of between the brand and the whole action cluster;
+   margin-left:auto pushes this (and everything after it) flush right instead. */
 .page__header-actions {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-width: 0;
+  margin-left: auto;
   flex-wrap: nowrap;
   overflow-x: auto;
   scrollbar-width: none;
