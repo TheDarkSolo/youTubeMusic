@@ -189,31 +189,160 @@ h3 {
   transform: translateY(-50%) translateX(20px);
 }
 
-.login-card {
-  max-width: 420px;
-  text-align: center;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 40px 36px 36px;
+/* Logged-out landing screen: a two-column hero (brand pill + headline + subhead + CTA on the
+   left, three feature cards stacked on the right) in the spirit of a small product marketing
+   page rather than a bare login box — but built entirely on the existing token set, not a new
+   palette. Single stacked column below 900px (see the min-width query at the bottom of this
+   block); the feature stack itself never re-flows into a grid, so three cards read as one
+   even column at every width instead of leaving an awkward orphan card in a 2-up grid. */
+.landing {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 96px 24px 64px;
+  position: relative;
+}
+
+.landing__grid {
+  width: 100%;
+  max-width: 1080px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  box-shadow: var(--shadow-sm);
+  gap: 48px;
 }
 
-.login-card__logo {
-  margin-bottom: 18px;
+.landing__hero {
+  max-width: 640px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.login-card h1 {
-  margin-bottom: 0.5em;
-}
-
-.login-card p {
+/* Small brand pill above the headline (DeepSeek-hero-style eyebrow), standing in for the old
+   standalone big logo mark — carries the same <Logo>, just smaller and paired with a wordmark. */
+.landing__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px 6px 6px;
+  margin-bottom: 24px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 999px;
   color: var(--text-muted);
-  margin: 0 0 24px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.landing__headline {
+  margin: 0 0 14px;
+  font-size: clamp(1.6rem, 1.15rem + 1.8vw, 2.35rem);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.landing__subhead {
+  margin: 0 0 28px;
+  color: var(--text-muted);
+  font-size: 1.02rem;
+  line-height: 1.6;
+  max-width: 480px;
+}
+
+.landing__cta {
+  padding: 12px 28px;
+  font-size: 0.92em;
+}
+
+.landing__disclaimer {
+  margin: 16px 0 0;
+}
+
+.landing__features {
+  width: 100%;
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.landing__feature-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px 22px 24px;
+  text-align: left;
+  transition: border-color 0.15s ease;
+}
+
+.landing__feature-card:hover {
+  border-color: var(--border-strong);
+}
+
+.landing__feature-card h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+.landing__feature-card p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
   line-height: 1.55;
+}
+
+.landing__feature-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 14px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* Two-column hero from here up: hero text on the left (left-aligned, narrower so lines don't
+   run too long), the three feature cards filling a column on the right. Below this the grid
+   collapses back to the single centered stack above. */
+@media (min-width: 900px) {
+  .landing__grid {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 64px;
+  }
+
+  .landing__hero {
+    flex: 1 1 0;
+    max-width: 440px;
+    text-align: left;
+    align-items: flex-start;
+  }
+
+  .landing__subhead {
+    max-width: 420px;
+  }
+
+  .landing__features {
+    flex: 1 1 0;
+    max-width: 420px;
+  }
+}
+
+@media (max-width: 640px) {
+  .landing {
+    padding: 72px 20px 48px;
+  }
+
+  .landing__grid {
+    gap: 36px;
+  }
 }
 
 .page {
