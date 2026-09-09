@@ -36,7 +36,13 @@ Optional:
 
 | Variable | Description | Default |
 |---|---|---|
-| `SERVER_PORT` | Backend port | `8080` |
+| `SERVER_PORT` | Backend port (ignored if `PORT` is set) | `8080` |
+| `PORT` | Backend port, takes priority over `SERVER_PORT` — most PaaS (e.g. Render) inject this automatically | - |
+| `COOKIE_SAME_SITE` | Session cookie `SameSite` attribute. Set to `none` when frontend and backend are on different domains (prod) | `lax` |
+| `COOKIE_SECURE` | Session cookie `Secure` attribute. Must be `true` whenever `COOKIE_SAME_SITE=none` (browser requirement) and the site is served over HTTPS | `false` |
+
+See [docs/DEPLOYMENT.md](../docs/DEPLOYMENT.md) for a full production deployment walkthrough
+(Render + Vercel).
 
 You have two ways to provide these:
 

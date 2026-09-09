@@ -16,4 +16,8 @@
 
 ## Запуск
 
-См. инструкции в [backend/README.md](backend/README.md) и [frontend/README.md](frontend/README.md) (появятся по мере готовности).
+См. инструкции в [backend/README.md](backend/README.md) и [frontend/README.md](frontend/README.md).
+
+## Деплой
+
+См. [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — прод-деплой на Render (backend) + Vercel (frontend).
